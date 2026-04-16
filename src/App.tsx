@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useProgressStore } from '@/store/progress'
+import { useProfilesStore } from '@/store/profiles'
 import { getWeekByNumber, PHASE_NAMES } from '@/data/curriculum'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import AuthScreen from '@/components/AuthScreen'
+import ProfileSwitcher from '@/components/ProfileSwitcher'
 
 // Lazy-load heavy components
 const Dashboard = lazy(() => import('@/components/Dashboard'))
@@ -40,6 +43,10 @@ export default function App() {
     markLessonRead,
     weekProgress,
   } = useProgressStore()
+
+  const { getActiveProfile, activeProfileId } = useProfilesStore()
+  const activeProfile = getActiveProfile()
+  const [showAuth, setShowAuth] = useState(!activeProfileId)
 
   const [view, setView] = useState<AppView>('dashboard')
   const [sageOpen, setSageOpen] = useState(!isMobile)
@@ -92,6 +99,19 @@ export default function App() {
     { id: 'insights', label: 'Insights', icon: '★' },
   ]
 
+  // Show auth screen if no active profile
+  if (showAuth) {
+    return (
+      <AuthScreen
+        onAuthenticated={() => {
+          setShowAuth(false)
+          // Reload so the progress store re-initialises with the new profile's key
+          window.location.reload()
+        }}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col h-screen bg-bg-primary bg-grid overflow-hidden">
 
@@ -128,6 +148,7 @@ export default function App() {
           {isMobile && (
             <span className="text-accent-muted text-xs font-mono">Wk {currentWeek}</span>
           )}
+          <ProfileSwitcher onSwitchRequest={() => setShowAuth(true)} />
           <button
             onClick={() => isMobile ? setSageSheetOpen(true) : setSageOpen(o => !o)}
             className={`
@@ -277,6 +298,8 @@ export default function App() {
                       selectedCode={selectedCodeLang === 'sql' || selectedCodeLang === 'python' ? selectedCode : undefined}
                       isOpen={sageOpen}
                       onToggle={() => setSageOpen(false)}
+                      studentName={activeProfile?.name}
+                      userContext={activeProfile?.context}
                     />
                   </Suspense>
                 </motion.aside>
@@ -345,6 +368,8 @@ export default function App() {
                     selectedCode={selectedCode}
                     isOpen={true}
                     onToggle={() => setSageSheetOpen(false)}
+                    studentName={activeProfile?.name}
+                    userContext={activeProfile?.context}
                   />
                 </Suspense>
               </motion.div>

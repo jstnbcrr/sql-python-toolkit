@@ -114,10 +114,21 @@ const defaultWeekProgress = (): WeekProgress => ({
   insightsUnlocked: [],
 })
 
+// Derive storage key from active profile so each account has isolated progress.
+// Must be evaluated at module load time (before React renders).
+function getProgressStorageKey(): string {
+  try {
+    const id = localStorage.getItem('sage-active-profile')
+    return id ? `sage-progress-${id}` : 'sage-learning-progress'
+  } catch {
+    return 'sage-learning-progress'
+  }
+}
+
 export const useProgressStore = create<ProgressState>()(
   persist(
     (set, get) => ({
-      studentName: 'Justin',
+      studentName: '',
       currentWeek: 1,
       currentPhase: 1,
       xp: 0,
@@ -274,7 +285,7 @@ export const useProgressStore = create<ProgressState>()(
       },
     }),
     {
-      name: 'sage-learning-progress',
+      name: getProgressStorageKey(),
       version: 1,
     }
   )

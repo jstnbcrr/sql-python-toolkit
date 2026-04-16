@@ -19,6 +19,8 @@ interface SageTutorProps {
   selectedCode?: string
   isOpen: boolean
   onToggle: () => void
+  studentName?: string
+  userContext?: string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -298,6 +300,8 @@ const SageTutor: React.FC<SageTutorProps> = ({
   selectedCode,
   isOpen,
   onToggle,
+  studentName,
+  userContext,
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -366,7 +370,7 @@ const SageTutor: React.FC<SageTutorProps> = ({
             .map(s => `${s.title}\n${s.content}`)
             .join('\n\n')
         : ''
-      const systemPrompt = buildSageSystemPrompt(currentWeek, currentTopic, currentPhase, lessonContent)
+      const systemPrompt = buildSageSystemPrompt(currentWeek, currentTopic, currentPhase, lessonContent, studentName, userContext)
 
       const history: SageMessage[] = messages
         .concat(userMsg)

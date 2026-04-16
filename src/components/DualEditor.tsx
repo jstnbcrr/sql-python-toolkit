@@ -331,7 +331,7 @@ export default function DualEditor({
     week,
     onError: handleSQLError,
     onMirrorRequest: handleSQLMirror,
-    height: '300px',
+    height: '360px',
   }
 
   const pythonEditorProps = {
@@ -339,7 +339,7 @@ export default function DualEditor({
     week,
     onError: handlePythonError,
     onMirrorRequest: handlePythonMirror,
-    height: '300px',
+    height: '360px',
   }
 
   // ─── Render ─────────────────────────────────────────────────────────────────

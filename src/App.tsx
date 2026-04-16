@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useProgressStore } from '@/store/progress'
 import { getWeekByNumber, PHASE_NAMES } from '@/data/curriculum'
 import { useIsMobile } from '@/hooks/useIsMobile'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 // Lazy-load heavy components
 const Dashboard = lazy(() => import('@/components/Dashboard'))
@@ -176,7 +177,7 @@ export default function App() {
         {/* Main content */}
         <div className="flex flex-1 overflow-hidden relative">
           <main className={`
-            flex-1 overflow-auto transition-all duration-300
+            flex-1 overflow-hidden transition-all duration-300
             ${!isMobile && sageOpen ? 'mr-[360px]' : ''}
           `}>
             <Suspense fallback={<LoadingSpinner />}>
@@ -187,7 +188,7 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2 }}
-                  className="h-full"
+                  className={view === 'editor' ? 'h-full' : 'h-full overflow-auto'}
                 >
                   {view === 'dashboard' && (
                     <Dashboard
@@ -208,14 +209,16 @@ export default function App() {
                     />
                   )}
                   {view === 'editor' && (
-                    <div className="h-full p-3">
-                      <DualEditor
-                        week={currentWeek}
-                        datasetName={weekDef?.dataset || 'week1_menu.db'}
-                        onSageError={handleSageError}
-                        onMirrorReady={(code, from) => setMirrorContent(`From ${from}: ${code}`)}
-                        onCodeSelect={handleCodeSelect}
-                      />
+                    <div className="h-full flex flex-col">
+                      <ErrorBoundary fallback="Editor failed to load — check the browser console for details">
+                        <DualEditor
+                          week={currentWeek}
+                          datasetName={weekDef?.dataset || 'week1_menu.db'}
+                          onSageError={handleSageError}
+                          onMirrorReady={(code, from) => setMirrorContent(`From ${from}: ${code}`)}
+                          onCodeSelect={handleCodeSelect}
+                        />
+                      </ErrorBoundary>
                     </div>
                   )}
                   {view === 'project' && weekDef?.miniProject && (

@@ -1,7 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import MonacoEditor from '@monaco-editor/react'
-import initSqlJs, { Database } from 'sql.js'
 import { motion, AnimatePresence } from 'framer-motion'
+
+// sql.js is loaded via CDN in index.html — access via window
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const initSqlJs: (config: { locateFile: (f: string) => string }) => Promise<any>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Database = any
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

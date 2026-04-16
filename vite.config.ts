@@ -11,7 +11,7 @@ export default defineConfig({
     }),
   ],
   optimizeDeps: {
-    exclude: ['sql.js'],
+    exclude: [],
   },
   server: {
     proxy: {

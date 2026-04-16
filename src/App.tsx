@@ -37,6 +37,8 @@ export default function App() {
     setCurrentWeek,
     startSession,
     endSession,
+    markLessonRead,
+    weekProgress,
   } = useProgressStore()
 
   const [view, setView] = useState<AppView>('dashboard')
@@ -206,6 +208,8 @@ export default function App() {
                         if (isMobile) setSageSheetOpen(true)
                         else setSageOpen(true)
                       }}
+                      onMarkRead={() => markLessonRead(currentWeek)}
+                      isRead={weekProgress[currentWeek]?.lessonRead ?? false}
                     />
                   )}
                   {view === 'editor' && (

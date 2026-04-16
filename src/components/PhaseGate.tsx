@@ -149,6 +149,201 @@ const PHASE_1_QUESTIONS: Question[] = [
   },
 ]
 
+// ─── Phase 2 questions (Weeks 5–8) ───────────────────────────────────────────
+
+const PHASE_2_QUESTIONS: Question[] = [
+  {
+    id: 1,
+    type: 'multiple_choice',
+    question: 'What does COALESCE(discount, 0) do when discount is NULL?',
+    options: [
+      'A) Returns an error',
+      'B) Returns 0 (the fallback value)',
+      'C) Skips the row entirely',
+      'D) Returns NULL unchanged',
+    ],
+    answer: 'B',
+    hint: 'COALESCE returns the first non-NULL value in its argument list.',
+  },
+  {
+    id: 2,
+    type: 'fill_blank',
+    question: 'Complete this window function to rank employees by score within each department:\n\nROW_NUMBER() _____ (PARTITION BY department ORDER BY score DESC)',
+    answer: 'OVER',
+    hint: 'All window functions use this keyword before the parentheses.',
+  },
+  {
+    id: 3,
+    type: 'multiple_choice',
+    question: 'In a CTE (WITH clause), what is the main advantage over a subquery?',
+    options: [
+      'A) CTEs are always faster than subqueries',
+      'B) CTEs can be referenced multiple times and improve readability',
+      'C) CTEs bypass index lookups',
+      'D) CTEs automatically cache results permanently',
+    ],
+    answer: 'B',
+  },
+  {
+    id: 4,
+    type: 'code',
+    question: 'Write a SQL query using LAG() to show each month\'s revenue AND the previous month\'s revenue. Assume a table monthly_sales(month TEXT, revenue REAL).',
+    answer: 'SELECT month, revenue, LAG(revenue) OVER (ORDER BY month) AS prev_month FROM monthly_sales',
+  },
+  {
+    id: 5,
+    type: 'multiple_choice',
+    question: 'What is the difference between RANK() and ROW_NUMBER() when two rows have the same value?',
+    options: [
+      'A) No difference — they always produce identical results',
+      'B) RANK() assigns the same rank to ties and skips the next rank; ROW_NUMBER() assigns unique sequential numbers',
+      'C) ROW_NUMBER() only works with numeric columns',
+      'D) RANK() is faster because it uses an index',
+    ],
+    answer: 'B',
+  },
+  {
+    id: 6,
+    type: 'fill_blank',
+    question: 'In pandas, to remove all rows with any NaN value, you call:\n\ndf._____()',
+    answer: 'dropna',
+    hint: 'The method name literally describes what it does to NA values.',
+  },
+  {
+    id: 7,
+    type: 'multiple_choice',
+    question: 'What does UNION ALL do differently from UNION?',
+    options: [
+      'A) UNION ALL joins tables horizontally; UNION joins vertically',
+      'B) UNION ALL keeps duplicate rows; UNION removes them',
+      'C) UNION ALL is slower because it checks for duplicates',
+      'D) There is no difference in SQLite',
+    ],
+    answer: 'B',
+  },
+  {
+    id: 8,
+    type: 'code',
+    question: 'Write pandas code to group a DataFrame df by "category" and calculate both the sum and mean of the "revenue" column in one operation.',
+    answer: 'df.groupby("category")["revenue"].agg(["sum", "mean"])',
+  },
+  {
+    id: 9,
+    type: 'multiple_choice',
+    question: 'Which SQL set operation returns only rows that appear in BOTH result sets?',
+    options: [
+      'A) UNION',
+      'B) EXCEPT',
+      'C) INTERSECT',
+      'D) UNION ALL',
+    ],
+    answer: 'C',
+  },
+  {
+    id: 10,
+    type: 'code',
+    question: 'Write a SQL CASE statement that labels items: price < 5 = "Budget", price 5-10 = "Mid", price > 10 = "Premium". Use a column called price from a table called menu.',
+    answer: "SELECT price, CASE WHEN price < 5 THEN 'Budget' WHEN price <= 10 THEN 'Mid' ELSE 'Premium' END AS tier FROM menu",
+  },
+]
+
+// ─── Phase 3 questions (Weeks 9–12) ──────────────────────────────────────────
+
+const PHASE_3_QUESTIONS: Question[] = [
+  {
+    id: 1,
+    type: 'multiple_choice',
+    question: 'When should you do filtering and aggregation in SQL vs Python?',
+    options: [
+      'A) Always in Python — it\'s more flexible',
+      'B) Filter and aggregate in SQL to reduce data volume; transform and analyze in Python',
+      'C) Always in SQL — it\'s faster for everything',
+      'D) It doesn\'t matter, both produce the same performance',
+    ],
+    answer: 'B',
+  },
+  {
+    id: 2,
+    type: 'fill_blank',
+    question: 'To load a SQL query result directly into a pandas DataFrame, you use:\n\npd._____(query, connection)',
+    answer: 'read_sql',
+    hint: 'The method name mirrors how you read a CSV with pandas.',
+  },
+  {
+    id: 3,
+    type: 'multiple_choice',
+    question: 'You run EXPLAIN QUERY PLAN on a query and see "SCAN TABLE orders". What does this mean?',
+    options: [
+      'A) The query is optimized and using the best available method',
+      'B) The database is reading every row in the table — a full table scan that is slow at scale',
+      'C) The query has a syntax error',
+      'D) An index is being used correctly',
+    ],
+    answer: 'B',
+  },
+  {
+    id: 4,
+    type: 'code',
+    question: 'Write Python code using sqlite3 to connect to "sales.db", run a query that selects all rows from a "transactions" table, and fetch all results into a variable called rows.',
+    answer: 'import sqlite3\nconn = sqlite3.connect("sales.db")\ncursor = conn.cursor()\ncursor.execute("SELECT * FROM transactions")\nrows = cursor.fetchall()',
+  },
+  {
+    id: 5,
+    type: 'multiple_choice',
+    question: 'What is the main performance benefit of replacing a Python for loop with a vectorized pandas operation?',
+    options: [
+      'A) Vectorized operations use less memory',
+      'B) Vectorized operations run in compiled C/NumPy code instead of the Python interpreter, making them 100-1000x faster',
+      'C) Vectorized operations automatically handle NULL values',
+      'D) Vectorized operations work on any data type',
+    ],
+    answer: 'B',
+  },
+  {
+    id: 6,
+    type: 'fill_blank',
+    question: 'To add an index on the customer_id column of an orders table to speed up JOIN queries, you write:\n\nCREATE _____ idx_orders_customer ON orders(customer_id)',
+    answer: 'INDEX',
+    hint: 'Two words — the SQL keyword for creating a performance optimization structure.',
+  },
+  {
+    id: 7,
+    type: 'multiple_choice',
+    question: 'Which try/except pattern is best practice in Python?',
+    options: [
+      'A) except: pass  — catch everything silently',
+      'B) except Exception as e: print(e)  — catch everything with a generic message',
+      'C) except FileNotFoundError:  — catch specific exception types with actionable messages',
+      'D) No try/except — let the program crash naturally',
+    ],
+    answer: 'C',
+  },
+  {
+    id: 8,
+    type: 'code',
+    question: 'Rewrite this slow loop as a vectorized pandas operation:\n\nfor i, row in df.iterrows():\n    df.at[i, "total"] = row["price"] * row["quantity"]',
+    answer: "df['total'] = df['price'] * df['quantity']",
+  },
+  {
+    id: 9,
+    type: 'multiple_choice',
+    question: 'What does "applying a function on a column that has an index" prevent in SQL performance?',
+    options: [
+      'A) Nothing — functions never affect index usage',
+      'B) Using functions like LOWER() or YEAR() on an indexed column prevents the database from using the index, causing a full scan',
+      'C) Functions only affect TEXT columns',
+      'D) Functions improve index performance',
+    ],
+    answer: 'B',
+  },
+  {
+    id: 10,
+    type: 'code',
+    question: 'Write a Python function called clean_dataframe that takes a DataFrame df, drops duplicate rows, fills NaN values in a "quantity" column with 0, and returns the cleaned DataFrame.',
+    answer: 'def clean_dataframe(df):\n    df = df.drop_duplicates()\n    df["quantity"] = df["quantity"].fillna(0)\n    return df',
+  },
+]
+
 const TOTAL_SECONDS = 45 * 60 // 45 minutes
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -321,7 +516,10 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, answer, onChange,
 const PhaseGate: React.FC<PhaseGateProps> = ({ phase, onPass, onFail }) => {
   const { completePhaseGate, failPhaseGate } = useProgressStore()
 
-  const questions = phase === 1 ? PHASE_1_QUESTIONS : []
+  const questions =
+    phase === 1 ? PHASE_1_QUESTIONS :
+    phase === 2 ? PHASE_2_QUESTIONS :
+    phase === 3 ? PHASE_3_QUESTIONS : []
 
   const [screen, setScreen] = useState<ScreenState>('pre-start')
   const [currentQIdx, setCurrentQIdx] = useState(0)
@@ -404,10 +602,11 @@ const PhaseGate: React.FC<PhaseGateProps> = ({ phase, onPass, onFail }) => {
     const localTotal = Math.round((localScores.filter(s => s.correct).length / questions.length) * 100)
 
     // Try API grading
+    const phaseEndWeek = phase === 1 ? 4 : phase === 2 ? 8 : phase === 3 ? 12 : 16
     const apiResult = await gradeAssessment({
       questions: questions.map(q => ({ question: q.question, expected: q.answer })),
       answers: questions.map(q => answers[q.id] || ''),
-      week: 4, // end of phase 1
+      week: phaseEndWeek,
     })
 
     const finalResult = apiResult ?? {
@@ -436,13 +635,13 @@ const PhaseGate: React.FC<PhaseGateProps> = ({ phase, onPass, onFail }) => {
   const answeredCount = Object.keys(answers).length
   const timerUrgent = timeLeft < 300 // < 5 minutes
 
-  // ── Pre-start screen ─────────────────────────────────────────────
-  if (phase !== 1) {
+  // ── Phase 4 not yet available ─────────────────────────────────────
+  if (phase === 4) {
     return (
       <div className="panel p-12 flex flex-col items-center justify-center text-center gap-4">
         <ShieldIcon className="w-12 h-12 text-[#8B949E]" />
-        <h2 className="text-xl font-display font-bold text-white">Phase {phase} Gate</h2>
-        <p className="text-[#8B949E] font-mono text-sm">Coming soon — check back when Phase {phase} content is released.</p>
+        <h2 className="text-xl font-display font-bold text-white">Phase 4 Capstone Defense</h2>
+        <p className="text-[#8B949E] font-mono text-sm">The Phase 4 defense is a live conversation with Sage — complete all four capstone projects first.</p>
       </div>
     )
   }

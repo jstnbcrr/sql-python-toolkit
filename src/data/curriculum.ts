@@ -11,6 +11,7 @@ export interface WeekDefinition {
   phaseGate: boolean
   dataset: string
   learningObjectives: string[]
+  bossLevelChallenge: string
 }
 
 export interface MiniProjectDef {
@@ -49,6 +50,7 @@ export const WEEKS: WeekDefinition[] = [
       'Create and assign variables in Python',
       'Use print() to display output',
     ],
+    bossLevelChallenge: 'Bobby Iliev\'s book opens with a challenge: can you write a single SELECT that turns the raw menu table into a formatted "menu board" — aliasing every column to a human-readable name, adding a calculated column for price_after_tax (price * 1.0875), and ordering by category then price ascending? No WHERE clause needed — this is purely about SELECT mastery. Then write the Python equivalent using only built-in data types (no pandas yet): a list of dictionaries, formatted and printed.',
   },
   {
     week: 2,
@@ -83,6 +85,7 @@ export const WEEKS: WeekDefinition[] = [
       'Write if/elif/else statements in Python',
       'See the parallel structure between SQL WHERE and Python if',
     ],
+    bossLevelChallenge: 'Iliev\'s book has a critical warning: NULL never equals anything — not even NULL. Write a query that reveals this: first, SELECT * WHERE discount = NULL (watch it return zero rows even when discounts exist as NULL). Then write it correctly with IS NULL. Now the hard part: combine WHERE, AND, OR, and IS NULL into one query that finds orders where status = \'complete\' AND (discount IS NULL OR discount = 0) AND quantity > 1. Then write the exact same logic in Python as a function that takes a list of order dicts and returns only the matching ones. The test: your SQL result count and Python result count must match.',
   },
   {
     week: 3,
@@ -120,6 +123,7 @@ export const WEEKS: WeekDefinition[] = [
       'Write for loops and list comprehensions in Python',
       'Use dictionaries to aggregate data in Python',
     ],
+    bossLevelChallenge: 'Write a single SQL query — no subqueries, no CTEs yet — that answers three questions at once: (1) total revenue per category, (2) only categories with avg order value > $8, and (3) ranked by total revenue descending. This tests whether you truly understand the difference between WHERE (filters before grouping) and HAVING (filters after). Then build the Python equivalent using only a dict and a for loop — no list comprehensions, no sorted() shortcuts. Just the raw logic. Which solution was harder to write? Which is easier to read? Write a 3-sentence answer.',
   },
   {
     week: 4,
@@ -158,6 +162,7 @@ export const WEEKS: WeekDefinition[] = [
       'Write Python functions with parameters and return values',
       'Use nested dictionaries to represent relational data',
     ],
+    bossLevelChallenge: 'Three-table join challenge: write a single SQL query that joins customers → orders → order_items to find each customer\'s top-spending category. This requires an INNER JOIN between three tables AND a GROUP BY on two columns (customer_id, category). Then answer Iliev\'s hardest conceptual question: what happens to your result if you change the customers-to-orders join from INNER to LEFT? How many rows change, and why? Write the Python version of this three-way join using nested dicts. No pandas — just raw Python data structures.',
   },
   {
     week: 5,
@@ -195,6 +200,7 @@ export const WEEKS: WeekDefinition[] = [
       'Handle missing values (NaN) in pandas',
       'Read CSV and database data into pandas',
     ],
+    bossLevelChallenge: 'McKinney\'s pandas book is blunt: "Most data you encounter will be messy." Your challenge: write a SQL CASE statement that buckets items into price tiers (Under $5 → "Value", $5-$9 → "Standard", $10+ → "Premium") AND handles the case where price IS NULL (bucket it as "Unknown"). Then do the same thing in pandas using pd.cut() with a custom bins array — McKinney covers this in the data wrangling chapter. Compare the two approaches: which handles NULL/NaN more naturally? What does pd.cut() return for NaN values by default, and how do you change that behavior?',
   },
   {
     week: 6,
@@ -232,6 +238,7 @@ export const WEEKS: WeekDefinition[] = [
       'Use pandas groupby with aggregation functions',
       'Filter DataFrames with boolean indexing and loc/iloc',
     ],
+    bossLevelChallenge: 'The Iliev book\'s window function challenge: write a single query (no subqueries, using only a CTE + window functions) that shows each employee\'s score, their rank within their department using RANK(), their rank using ROW_NUMBER(), and the score of the #1 performer in their department using FIRST_VALUE(). Why do RANK() and ROW_NUMBER() sometimes give different results for the same data? Then replicate ONLY the RANK() logic in pandas — McKinney\'s groupby chapter shows how. The twist: what does pandas rank() do with ties by default, and how does that differ from SQL\'s RANK()?',
   },
   {
     week: 7,
@@ -270,6 +277,7 @@ export const WEEKS: WeekDefinition[] = [
       'Work with Python datetime objects',
       'Use pandas resample() and rolling() for time series',
     ],
+    bossLevelChallenge: 'McKinney dedicates a full chapter to time series for a reason — it\'s the hardest data type. Your boss-level challenge: using LAG(), calculate the week-over-week revenue change percentage for every week in the dataset. Then flag any week where the change was worse than -10% as "Alert" and better than +10% as "Strong" (use CASE). That\'s the SQL side. For Python: use pandas resample("W") to get weekly totals, then use pct_change() to get the percentage change. The hard part: resample() requires the date column to be the index. Walk through exactly how you set that up and why it\'s necessary.',
   },
   {
     week: 8,
@@ -309,6 +317,7 @@ export const WEEKS: WeekDefinition[] = [
       'Apply Python set operations (union, intersection, difference)',
       'Use pandas pivot_table for multi-dimensional analysis',
     ],
+    bossLevelChallenge: 'PHASE 2 BOSS: Iliev saves this for last because it requires thinking in sets, not rows. Write a query that answers: "Which products appear in the top 5 by revenue in at least 2 of our 3 regions?" This cannot be solved with a single INTERSECT — you need UNION ALL + GROUP BY + HAVING. Then build the exact same logic in Python using Python set objects (set(), &, |, -) — no pandas. Draw the Venn diagram first, then write the code. The final question: UNION vs UNION ALL — when does the distinction matter, and when doesn\'t it? Give a real example from this dataset where using UNION instead of UNION ALL would give you a WRONG answer.',
   },
   {
     week: 9,
@@ -347,6 +356,7 @@ export const WEEKS: WeekDefinition[] = [
       'Write clear, accurate data narratives',
       'Build production-quality visualizations',
     ],
+    bossLevelChallenge: 'McKinney\'s pipeline philosophy: "SQL extracts, Python transforms." Build a pipeline that earns that philosophy. Write 3 SQL queries that each return focused, minimal result sets (no SELECT *). Load each into pandas with pd.read_sql(). Then use pandas exclusively for everything after: calculate a derived metric that SQL can\'t easily express (e.g., rolling 4-week revenue per location), merge two of the DataFrames together, and produce a single summary DataFrame that could be the data source for an executive chart. The constraint: every pandas operation must be vectorized — no .apply() with a lambda, no for loops. Explain why each operation can be vectorized.',
   },
   {
     week: 10,
@@ -385,6 +395,7 @@ export const WEEKS: WeekDefinition[] = [
       'Implement basic error handling with try/except',
       'Design scripts that are readable by others',
     ],
+    bossLevelChallenge: 'Sweigart\'s automation philosophy: "If you have to do it more than twice, automate it." Take the weekly sales report you built manually in Week 3 and turn it fully automated. The script must: (1) accept a --week argument from the command line using argparse, (2) connect to the database using sqlite3, (3) run 3 queries, (4) write results to a CSV with a timestamp in the filename, (5) catch and log any error with a specific message (not just "an error occurred"), (6) print a run summary showing each step\'s execution time. If anything fails, it must fail loudly with a useful error — not silently. Test it by intentionally passing a bad database path and confirm the error message is helpful.',
   },
   {
     week: 11,
@@ -423,6 +434,7 @@ export const WEEKS: WeekDefinition[] = [
       'Profile Python code with timeit',
       'Replace loops with vectorized pandas operations',
     ],
+    bossLevelChallenge: 'Take this deliberately slow query: SELECT * FROM transactions t JOIN customers c ON c.id = t.customer_id WHERE LOWER(c.email) LIKE \'%@gmail.com\' AND strftime(\'%Y\', t.created_at) = \'2024\'. Run EXPLAIN QUERY PLAN on it. Count how many full table scans appear. Now fix EVERY performance problem: (1) replace LOWER() function on indexed column with a case-insensitive approach, (2) replace the strftime() date function with a direct range comparison (function calls on indexed columns prevent index use), (3) replace SELECT * with only the columns actually needed, (4) add the right indexes. Run EXPLAIN again. Compare the before and after output word for word and explain what each change did to the query plan.',
   },
   {
     week: 12,
@@ -461,6 +473,7 @@ export const WEEKS: WeekDefinition[] = [
       'Understand the difference between "working" and "good"',
       'Write self-documenting code',
     ],
+    bossLevelChallenge: 'PHASE 3 BOSS: Go back to your Week 3 and Week 6 solutions. Pretend you wrote them 6 months ago and are reading them for the first time. Apply everything from Week 12 — rename every variable that isn\'t immediately obvious, extract repeated logic into named functions, add a one-line comment to every non-obvious decision explaining WHY not WHAT, and add a docstring to every function. Then review someone else\'s code: ask Sage to generate a "bad but working" Python ETL script, then do a full code review: list every issue (bugs, style problems, performance issues, unclear logic), fix the bugs, and refactor for readability. The rule: your refactored version must produce identical output to the original.',
   },
   {
     week: 13,
@@ -493,6 +506,7 @@ export const WEEKS: WeekDefinition[] = [
       'Write complex multi-table analytical queries',
       'Connect all Phase 1-3 skills in one integrated system',
     ],
+    bossLevelChallenge: 'Kimball\'s core principle: "The power of the dimensional model is that it matches the mental model of the business user." Your challenge: take your retail star schema and add a Date dimension — the most common dimension in any warehouse. Date dimensions have one row per day and dozens of pre-calculated attributes: day_of_week, is_weekend, fiscal_quarter, is_holiday. Populate it for a 3-year range (2022-2024). Then write a query that joins FactSales to DimDate to answer: "What percentage of total annual revenue comes from weekends vs weekdays?" This is a Kimball Chapter 3 exercise translated to your data.',
   },
   {
     week: 14,
@@ -525,6 +539,7 @@ export const WEEKS: WeekDefinition[] = [
       'Connect personal domain knowledge to technical skills',
       'Design dashboards for non-technical audiences',
     ],
+    bossLevelChallenge: 'You\'ve worked at SunTran — you know what "on-time" actually means in practice. That knowledge is your advantage. The boss-level challenge: define "on-time" more precisely than "within 5 minutes." Different routes have different tolerances — a high-frequency urban route (every 10 min) needs ±2 min precision; a suburban route (every 30 min) might allow ±7 min. Write a SQL CASE that applies route-specific tolerance thresholds when calculating on-time performance. Then write a Python function that takes a route_type and returns the correct threshold — and explain why the business logic belongs in Python (configurable) rather than hardcoded in SQL. This is Kimball\'s "conformed dimensions" concept applied to operational data.',
   },
   {
     week: 15,
@@ -557,6 +572,7 @@ export const WEEKS: WeekDefinition[] = [
       'Balance sensitivity vs specificity in anomaly detection',
       'Communicate anomaly findings clearly',
     ],
+    bossLevelChallenge: 'McKinney\'s statistics chapter frames this perfectly: "Outlier detection is about defining what normal looks like mathematically." Your boss challenge: implement TWO anomaly detection methods and compare their results. Method 1: z-score (flag anything beyond ±2.5 std devs). Method 2: IQR method (flag anything below Q1 - 1.5*IQR or above Q3 + 1.5*IQR). Run both on the same dataset. Where do they agree? Where do they disagree? Which method generates more false positives? For the disagreements, investigate each one manually — is it a real anomaly or a false alarm? Write a 1-paragraph summary defending which method you\'d use in a real monitoring system and why, with specific evidence from your results.',
   },
   {
     week: 16,
@@ -589,6 +605,7 @@ export const WEEKS: WeekDefinition[] = [
       'Think like someone reviewing your own code',
       'Connect the semester arc: what can you do now that you couldn\'t 16 weeks ago?',
     ],
+    bossLevelChallenge: 'The hardest question in any senior interview isn\'t technical — it\'s this: "Tell me about a technical decision you made that turned out to be wrong." Go back through your 16 weeks of work. Find one decision you made (a query design, a data cleaning choice, a schema decision) that you now realize was suboptimal. Write a 200-word post-mortem: what was the decision, why did you make it at the time, what do you now understand that you didn\'t then, and what would you do differently? Then identify one concept from the books — Iliev, Sweigart, McKinney, or Kimball — that you didn\'t fully appreciate in Week 1 but now see as foundational. The ability to critique your own past work is what separates senior engineers from junior ones.',
   },
 ]
 

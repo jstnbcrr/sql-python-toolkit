@@ -7,7 +7,8 @@
     "teaser": "CTEs look cleaner, but they're not always faster.",
     "content": "A CTE (Common Table Expression, the WITH clause) was invented primarily for readability, not performance. In most databases, a CTE and an equivalent subquery produce the exact same execution plan. The real reason senior engineers prefer CTEs: you write the logic once, give it a name, and reference it multiple times — just like naming a variable. However, in some databases (older MySQL, certain PostgreSQL versions), CTEs are NOT optimized the same way and can actually be SLOWER because they materialize the intermediate result. Rule: use CTEs for readability and reusability, but if a query is running slow, try rewriting the CTE as a subquery and compare EXPLAIN output.",
     "code_example": "-- This and the subquery version produce IDENTICAL results in SQLite\nWITH high_value_orders AS (\n  SELECT customer_id, SUM(total) as lifetime_value\n  FROM orders\n  GROUP BY customer_id\n  HAVING lifetime_value > 1000\n)\nSELECT c.name, h.lifetime_value\nFROM customers c\nINNER JOIN high_value_orders h ON c.id = h.customer_id;",
-    "senior_tip": "I always use CTEs in production code because six months later, someone else (or future-me) has to read it. Readability is a feature."
+    "senior_tip": "I always use CTEs in production code because six months later, someone else (or future-me) has to read it. Readability is a feature.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 7 (Subqueries and CTEs)"
   },
   {
     "id": "always-alias",
@@ -17,7 +18,8 @@
     "teaser": "SELECT * is fine for exploring. It's dangerous in production.",
     "content": "When you write SELECT * FROM orders, you get every column in the current schema. But what happens when someone adds a 'password_hash' column six months later? Or rearranges column order? If you're feeding that query into an application, your code breaks silently. Senior engineers alias every column in production queries for three reasons: (1) explicit is safer than implicit, (2) aliases document intent — SELECT SUM(amount) AS total_revenue tells the reader what they're looking at, and (3) it forces you to think about exactly what data you actually need.",
     "code_example": "-- Dangerous in production:\nSELECT * FROM orders WHERE status = 'complete';\n\n-- Senior-level:\nSELECT\n  o.id AS order_id,\n  o.customer_id,\n  o.total_amount AS revenue,\n  o.order_date\nFROM orders o\nWHERE o.status = 'complete';",
-    "senior_tip": "The five seconds it takes to alias your columns will save you hours of debugging when the schema changes."
+    "senior_tip": "The five seconds it takes to alias your columns will save you hours of debugging when the schema changes.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 2 (SELECT basics)"
   },
   {
     "id": "pandas-vs-python",
@@ -27,7 +29,8 @@
     "teaser": "The overhead of pandas isn't free.",
     "content": "Pandas is optimized for large tabular data with C-backed vectorized operations. But it has real overhead: object creation, index management, memory allocation. For very small datasets (< 1,000 rows) or simple row-by-row operations, a plain Python list comprehension or dictionary is often 10-50x faster. The break-even point where pandas wins is roughly: (1) any aggregation over 10k+ rows, (2) any join operation on two tables, (3) any operation that would require a nested loop in pure Python. Below that threshold, the overhead of creating a DataFrame often costs more than the computation itself.",
     "code_example": "import timeit\n\n# For 100 numbers — pure Python wins\ndata = list(range(100))\n\n# Pure Python: ~0.001ms\nresult = [x * 2 for x in data if x > 50]\n\n# Pandas: ~2ms (200x slower for tiny data!)\nimport pandas as pd\ns = pd.Series(data)\nresult = s[s > 50] * 2\n\n# For 1,000,000 numbers — pandas wins by a mile",
-    "senior_tip": "I use pandas when I'm working with tabular data that came from a database or CSV. I use plain Python lists/dicts for everything else."
+    "senior_tip": "I use pandas when I'm working with tabular data that came from a database or CSV. I use plain Python lists/dicts for everything else.",
+    "book_source": "Wes McKinney — Python for Data Analysis 3e, Chapter 4 (NumPy Basics)"
   },
   {
     "id": "dev-vs-prod",
@@ -37,7 +40,8 @@
     "teaser": "10k rows vs 10M rows is a different universe.",
     "content": "Three things change between dev and prod that kill query performance: (1) Data volume — your dev database has 10,000 rows; prod has 50 million. A full table scan that takes 2ms in dev takes 10 minutes in prod. (2) Missing indexes — adding an index on customer_id drops a 10-second query to 5ms, but nobody added the index in prod. (3) Lock contention — in dev you're the only user; in prod, 500 concurrent queries are all trying to read and write simultaneously. Always test queries with realistic data volumes, always check EXPLAIN before deploying, and always add indexes on foreign keys and frequently-filtered columns.",
     "code_example": "-- Always run EXPLAIN before deploying a query\nEXPLAIN QUERY PLAN\nSELECT c.name, COUNT(o.id) as order_count\nFROM customers c\nLEFT JOIN orders o ON c.id = o.customer_id\nWHERE o.order_date > '2024-01-01'\nGROUP BY c.id;\n-- If you see 'SCAN TABLE' without 'USING INDEX', add an index!",
-    "senior_tip": "I never push a query to production without running EXPLAIN on realistic data. Five minutes of analysis prevents five hours of incident response."
+    "senior_tip": "I never push a query to production without running EXPLAIN on realistic data. Five minutes of analysis prevents five hours of incident response.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 10 (Query Optimization)"
   },
   {
     "id": "deadly-join",
@@ -47,7 +51,8 @@
     "teaser": "A missing WHERE clause on a JOIN created a 2.3 billion row result set.",
     "content": "A Cartesian product (or cross join) happens when you JOIN two tables without a proper ON condition, or with a condition that doesn't actually filter. If table A has 50,000 rows and table B has 50,000 rows, a bad JOIN produces 2.5 billion rows. This query runs forever, consumes all database memory, and can crash the entire server — affecting every other user. Always verify your JOIN conditions before running against large tables. When in doubt, add a LIMIT 10 first and check that the result looks correct before removing the limit.",
     "code_example": "-- DANGEROUS — accidental cross join (missing JOIN condition)\nSELECT * FROM orders o, customers c\nWHERE o.status = 'complete';\n-- ^ This returns orders.count * customers.count rows!\n\n-- CORRECT\nSELECT * FROM orders o\nINNER JOIN customers c ON c.id = o.customer_id\nWHERE o.status = 'complete';",
-    "senior_tip": "Before any new JOIN on a table I haven't worked with before, I run SELECT COUNT(*) FROM that_table first. Knowing the row count takes 2 seconds and prevents disasters."
+    "senior_tip": "Before any new JOIN on a table I haven't worked with before, I run SELECT COUNT(*) FROM that_table first. Knowing the row count takes 2 seconds and prevents disasters.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 5 (JOINs)"
   },
   {
     "id": "sql-comments",
@@ -57,7 +62,8 @@
     "teaser": "SQL without comments is a liability.",
     "content": "SQL queries often encode business logic that isn't obvious from the code itself. What does 'status NOT IN (3,7,9)' mean six months later? Nobody knows without context. Senior engineers comment their SQL with: (1) WHY this filter exists (business rule, not just what it does), (2) what the expected result set represents in plain English, (3) any known edge cases or gotchas. This isn't about following rules — it's about the fact that SQL often becomes tribal knowledge embedded in a codebase, and undocumented business logic is a maintenance nightmare.",
     "code_example": "-- Monthly Revenue Report — excludes test accounts and refunded orders\n-- Business rule: status 3 = test, 7 = refunded, 9 = fraud\n-- Note: order_date uses UTC; convert to local time in reporting layer\nSELECT\n  DATE_TRUNC('month', order_date) AS month,\n  SUM(total_amount) AS gross_revenue,\n  COUNT(DISTINCT customer_id) AS unique_customers\nFROM orders\nWHERE status NOT IN (3, 7, 9)  -- exclude test, refunded, fraud\n  AND order_date >= '2024-01-01'\nGROUP BY 1\nORDER BY 1;",
-    "senior_tip": "I write SQL comments for my future self at 11pm during an incident, trying to understand what this query was supposed to do."
+    "senior_tip": "I write SQL comments for my future self at 11pm during an incident, trying to understand what this query was supposed to do.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 9 (Best Practices)"
   },
   {
     "id": "vectorize-dont-loop",
@@ -65,9 +71,10 @@
     "week_unlock": 11,
     "track": "python",
     "teaser": "df.apply() with a loop is the #1 beginner performance mistake.",
-    "content": "The most common performance mistake I see from junior data analysts: using df.apply() or a Python for loop to transform DataFrame data row by row. This is slow because it calls Python's interpreter for every single row. Vectorized pandas operations (arithmetic, string methods with .str, datetime with .dt) run in compiled C and are typically 100-1000x faster. The rule: if you can express the transformation as an operation on the entire column at once, always do that instead of looping.",
+    "content": "The most common performance mistake I see from junior data analysts: using df.apply() or a Python for loop to transform DataFrame data row by row. This is slow because it calls Python's interpreter for every single row. Vectorized pandas operations (arithmetic, string methods with .str, datetime with .dt) run in compiled C and are typically 100-1000x faster. The rule: if you can express the transformation as an operation on the entire column at once, always do that instead of looping. McKinney dedicates an entire section of Chapter 12 to this: 'pandas was designed for vectorized operations. Fight the instinct to loop.'",
     "code_example": "import pandas as pd\nimport time\n\ndf = pd.DataFrame({'price': range(100000), 'qty': range(100000)})\n\n# SLOW: Python loop (1.8 seconds on 100k rows)\nstart = time.time()\ndf['revenue_slow'] = df.apply(lambda row: row['price'] * row['qty'], axis=1)\nprint(f'Loop: {time.time()-start:.3f}s')\n\n# FAST: Vectorized (0.001 seconds — 1800x faster!)\nstart = time.time()\ndf['revenue_fast'] = df['price'] * df['qty']\nprint(f'Vector: {time.time()-start:.3f}s')",
-    "senior_tip": "If I see df.apply() in a code review, my first question is always 'can this be vectorized?' 90% of the time, the answer is yes."
+    "senior_tip": "If I see df.apply() in a code review, my first question is always 'can this be vectorized?' 90% of the time, the answer is yes.",
+    "book_source": "Wes McKinney — Python for Data Analysis 3e, Chapter 12 (Advanced pandas)"
   },
   {
     "id": "sql-vs-python",
@@ -77,7 +84,8 @@
     "teaser": "The wrong tool for the job is expensive.",
     "content": "The question isn't 'can I do this in SQL?' vs 'can I do this in Python?' — you can almost always do either. The question is where should this logic live? Use SQL when: (1) the data lives in a database and you want the database to do the filtering/aggregation (move less data), (2) the logic is a join, aggregation, or filter that SQL expresses naturally, (3) the result needs to be auditable or reproducible by a non-programmer. Use Python when: (1) you need complex conditional logic that SQL CASE statements make ugly, (2) you're doing machine learning or statistical analysis, (3) the transformation requires looping, string manipulation, or regex, (4) you're building a pipeline with multiple steps.",
     "code_example": "# Golden rule: filter and aggregate in SQL, transform and analyze in Python\n\n# SQL does the heavy lifting (database handles billions of rows efficiently)\nquery = '''\n  SELECT\n    customer_id,\n    SUM(total_amount) as lifetime_value,\n    COUNT(*) as order_count,\n    MAX(order_date) as last_order\n  FROM orders\n  WHERE status = 'complete'\n  GROUP BY customer_id\n'''\n\n# Python handles the analysis (small result set now)\ndf = pd.read_sql(query, conn)\ndf['is_churned'] = (pd.Timestamp.now() - pd.to_datetime(df['last_order'])).dt.days > 90\ndf['segment'] = pd.cut(df['lifetime_value'], bins=[0,100,500,1000,float('inf')],\n                        labels=['Bronze','Silver','Gold','Platinum'])",
-    "senior_tip": "The architecture I use 90% of the time: SQL extracts exactly the rows and columns I need, Python does everything after that."
+    "senior_tip": "The architecture I use 90% of the time: SQL extracts exactly the rows and columns I need, Python does everything after that.",
+    "book_source": "Wes McKinney — Python for Data Analysis 3e, Chapter 6 (Data Loading, Storage)"
   },
   {
     "id": "index-strategy",
@@ -87,7 +95,8 @@
     "teaser": "Three types of indexes solve most slow queries.",
     "content": "Most slow queries are slow for one of three reasons, and each has a simple fix: (1) Missing index on a foreign key — every column that appears after ON in a JOIN should be indexed. (2) Missing index on a frequently-filtered column — if you query WHERE status = 'complete' a thousand times a day, index that column. (3) The query returns too many columns — SELECT * forces the database to load the entire row from disk even when you only need 2 columns. A covering index (an index that includes all queried columns) eliminates disk reads entirely. The EXPLAIN command tells you which of these is happening.",
     "code_example": "-- Before optimization: query takes 8 seconds on 10M rows\nSELECT * FROM orders WHERE customer_id = 12345 AND status = 'complete';\n\n-- Step 1: Check the query plan\nEXPLAIN QUERY PLAN SELECT * FROM orders WHERE customer_id = 12345;\n-- Output: SCAN TABLE orders (full scan = slow!)\n\n-- Step 2: Add the right index\nCREATE INDEX idx_orders_customer_status ON orders(customer_id, status);\n\n-- Step 3: Verify (now uses index)\nEXPLAIN QUERY PLAN SELECT * FROM orders WHERE customer_id = 12345;\n-- Output: SEARCH TABLE orders USING INDEX (fast!)",
-    "senior_tip": "I add indexes as part of the same PR that adds the query. Indexes are not an afterthought — they're part of the schema design."
+    "senior_tip": "I add indexes as part of the same PR that adds the query. Indexes are not an afterthought — they're part of the schema design.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 10 (Performance and Indexes)"
   },
   {
     "id": "window-function-power",
@@ -95,8 +104,119 @@
     "week_unlock": 6,
     "track": "sql",
     "teaser": "ROW_NUMBER(), RANK(), LAG() and LEAD() make complex analyses trivial.",
-    "content": "Window functions let you compute aggregations without collapsing rows — you can see both the individual row AND the group summary in the same result. This eliminates entire categories of subquery complexity. The three patterns I use weekly: (1) ROW_NUMBER() OVER (PARTITION BY x ORDER BY y) — rank rows within a group, (2) LAG()/LEAD() — compare each row to the previous or next row, (3) SUM() OVER (PARTITION BY x ORDER BY date) — running totals without a self-join. If you find yourself writing a self-join or correlated subquery to compare rows to other rows, a window function almost certainly solves it more cleanly.",
+    "content": "Window functions let you compute aggregations without collapsing rows — you can see both the individual row AND the group summary in the same result. This eliminates entire categories of subquery complexity. The three patterns I use weekly: (1) ROW_NUMBER() OVER (PARTITION BY x ORDER BY y) — rank rows within a group, (2) LAG()/LEAD() — compare each row to the previous or next row, (3) SUM() OVER (PARTITION BY x ORDER BY date) — running totals without a self-join. Iliev's book says it directly: 'If you find yourself writing a self-join or correlated subquery to compare rows, a window function almost certainly solves it more cleanly.'",
     "code_example": "-- Find the top 3 products per category by revenue\nSELECT *\nFROM (\n  SELECT\n    category,\n    product_name,\n    revenue,\n    ROW_NUMBER() OVER (\n      PARTITION BY category\n      ORDER BY revenue DESC\n    ) AS rank_in_category\n  FROM product_sales\n) ranked\nWHERE rank_in_category <= 3;\n\n-- Month-over-month revenue change using LAG()\nSELECT\n  month,\n  revenue,\n  LAG(revenue) OVER (ORDER BY month) AS prev_month,\n  revenue - LAG(revenue) OVER (ORDER BY month) AS change\nFROM monthly_revenue;",
-    "senior_tip": "I once rewrote a 47-line query with three self-joins into 12 lines using window functions. The original took 2 minutes; the rewrite took 0.3 seconds."
+    "senior_tip": "I once rewrote a 47-line query with three self-joins into 12 lines using window functions. The original took 2 minutes; the rewrite took 0.3 seconds.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 8 (Window Functions)"
+  },
+  {
+    "id": "null-trap",
+    "title": "The NULL trap that silently corrupts every aggregate",
+    "week_unlock": 2,
+    "track": "sql",
+    "teaser": "NULL + anything = NULL. This destroys your sums.",
+    "content": "Iliev dedicates an entire chapter section to this because it bites everyone: NULL is not zero. NULL is not an empty string. NULL is the absence of a value, and it behaves differently from any other value in SQL. The critical traps: (1) NULL = NULL returns FALSE (or NULL) — use IS NULL instead. (2) SUM() and AVG() silently ignore NULLs — your average of [5, 10, NULL] is 7.5, not 5. (3) COUNT(*) counts all rows, but COUNT(column) ignores NULLs — these give different results on the same table. (4) In a JOIN, rows with NULL in the join key will never match anything. Test your assumptions about NULLs before trusting any aggregate.",
+    "code_example": "-- Trap 1: NULL comparisons\nSELECT * FROM orders WHERE discount = NULL;    -- Returns 0 rows!\nSELECT * FROM orders WHERE discount IS NULL;   -- Returns the NULLs\n\n-- Trap 2: Aggregates and NULLs\nSELECT\n  COUNT(*) AS all_rows,          -- counts everything\n  COUNT(discount) AS has_discount, -- ignores NULL discounts\n  AVG(discount) AS avg_discount  -- ignores NULLs in average!\nFROM orders;\n\n-- Fix with COALESCE\nSELECT AVG(COALESCE(discount, 0)) AS true_avg_discount\nFROM orders;",
+    "senior_tip": "When I join two tables and the row count looks wrong, NULLs in the join key are always my first suspicion.",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 3 (NULL Values)"
+  },
+  {
+    "id": "automate-mindset",
+    "title": "Sweigart's rule: if you do it twice, automate it",
+    "week_unlock": 10,
+    "track": "python",
+    "teaser": "Repetition is a symptom of missing automation.",
+    "content": "Al Sweigart opens Automate the Boring Stuff with a direct challenge to how most people work: 'If a task is repetitive, it can be automated. If it can be automated, automating it is always cheaper than doing it manually — even if writing the script takes 4 hours and the manual task only takes 20 minutes.' The math: a 20-minute task done weekly costs 17 hours per year. A 4-hour script that runs automatically saves 13 hours in year one and 17 hours every year after. But more important than the time savings: a script removes human error. The tenth time a person runs a manual report, they make a mistake. A script runs identically the ten-thousandth time.",
+    "code_example": "# Sweigart's principle applied: stop doing this manually\n# Before: manually running report every Monday\n# After: a script that runs itself\n\nimport sqlite3\nimport pandas as pd\nimport datetime\n\ndef run_weekly_report(db_path, output_dir):\n    \"\"\"Run automatically. No human required.\"\"\"\n    conn = sqlite3.connect(db_path)\n    \n    # Pull data\n    df = pd.read_sql('''\n        SELECT category, SUM(revenue) as total\n        FROM sales\n        WHERE date >= date('now', '-7 days')\n        GROUP BY category\n    ''', conn)\n    \n    # Write output with timestamp\n    filename = f\"report_{datetime.date.today()}.csv\"\n    df.to_csv(f\"{output_dir}/{filename}\", index=False)\n    print(f\"Report saved: {filename}\")\n    conn.close()\n\nif __name__ == '__main__':\n    run_weekly_report('sales.db', './reports')",
+    "senior_tip": "The best automation is invisible. When nobody notices the report because it always shows up on time, you've done it right.",
+    "book_source": "Al Sweigart — Automate the Boring Stuff with Python 2e, Introduction"
+  },
+  {
+    "id": "dataframe-mental-model",
+    "title": "McKinney's mental model for DataFrames",
+    "week_unlock": 5,
+    "track": "python",
+    "teaser": "A DataFrame is a dict of equal-length arrays. That's the whole thing.",
+    "content": "Wes McKinney (who wrote pandas) explains the DataFrame mental model in Chapter 5: think of it as a dictionary where every key is a column name and every value is an array of equal length. This mental model explains everything confusing about pandas: why df['column'] works (dict lookup), why df[['col1','col2']] returns a DataFrame instead of a Series (you're passing a list as the key, which returns multiple columns), and why operations on columns are fast (they're NumPy array operations under the hood). Once you hold this mental model, the API becomes intuitive instead of mysterious.",
+    "code_example": "import pandas as pd\nimport numpy as np\n\n# A DataFrame IS a dict of equal-length arrays\ndata = {\n    'item': ['Orange Chicken', 'Broccoli Beef', 'Chow Mein'],\n    'price': [9.80, 8.75, 4.40],\n    'calories': [490, 150, 510]\n}\ndf = pd.DataFrame(data)\n\n# Dict-style access returns a Series (one column)\nprint(type(df['item']))      # <class 'pandas.core.series.Series'>\n\n# List-style access returns a DataFrame (multiple columns)\nprint(type(df[['item', 'price']]))  # <class 'pandas.core.frame.DataFrame'>\n\n# Column operations are vectorized NumPy operations\ndf['price_per_100cal'] = df['price'] / df['calories'] * 100",
+    "senior_tip": "Understanding the underlying data model makes debugging 10x easier. When pandas behaves unexpectedly, I ask: 'what does this look like as a dict of arrays?'",
+    "book_source": "Wes McKinney — Python for Data Analysis 3e, Chapter 5 (Getting Started with pandas)"
+  },
+  {
+    "id": "star-schema-why",
+    "title": "Why Kimball's star schema still dominates after 30 years",
+    "week_unlock": 13,
+    "track": "sql",
+    "teaser": "The dimensional model matches how business users think, not how data is stored.",
+    "content": "Ralph Kimball's core insight from The Data Warehouse Toolkit: operational databases are designed for fast writes (OLTP). Analytical databases are designed for fast reads (OLAP). These goals are fundamentally in conflict. A normalized OLTP schema (3NF) is efficient for inserts but requires many JOINs to answer analytical questions. A denormalized star schema accepts some redundancy to make analytical queries fast and intuitive. The 'star' comes from a central fact table surrounded by dimension tables — like a star. Every analytical question maps to: pick the right fact table, join in the dimensions you need, filter and aggregate. Business users can understand this model without database expertise.",
+    "code_example": "-- OLTP normalized schema (many JOINs to answer one question)\nSELECT p.name, s.sale_date, SUM(s.amount)\nFROM sales s\nJOIN products p ON p.id = s.product_id\nJOIN categories c ON c.id = p.category_id\nJOIN stores st ON st.id = s.store_id\nJOIN locations l ON l.id = st.location_id\nGROUP BY 1, 2;\n\n-- Kimball star schema (same question, one JOIN)\nSELECT dp.product_name, dd.date, SUM(fs.amount)\nFROM fact_sales fs\nJOIN dim_product dp ON dp.product_key = fs.product_key\nJOIN dim_date dd ON dd.date_key = fs.date_key\nGROUP BY 1, 2;",
+    "senior_tip": "Every data warehouse I've worked on uses some version of Kimball's approach. It's 30 years old because it's right.",
+    "book_source": "Ralph Kimball — The Data Warehouse Toolkit, Chapter 1 (Dimensional Modeling Primer)"
+  },
+  {
+    "id": "error-handling-right",
+    "title": "Error handling: the difference between a script and a tool",
+    "week_unlock": 10,
+    "track": "python",
+    "teaser": "A script that crashes with a traceback is not production-ready.",
+    "content": "Sweigart's Automate the Boring Stuff has a key chapter on this: the difference between a script you wrote for yourself and a tool someone else can rely on is error handling. A bare 'except' clause that swallows all errors is worse than no error handling — it hides failures silently. Good error handling: (1) catches specific exception types (FileNotFoundError, sqlite3.OperationalError), not bare except, (2) provides a human-readable message that tells someone WHAT went wrong AND what to do about it, (3) either recovers gracefully or fails loudly — never silently. The test: can a non-programmer reading the error message figure out how to fix the problem without looking at the code?",
+    "code_example": "import sqlite3\n\n# BAD: swallows all errors silently\ntry:\n    conn = sqlite3.connect(db_path)\nexcept:\n    pass  # nothing works, nobody knows why\n\n# BAD: catches everything, generic message\ntry:\n    conn = sqlite3.connect(db_path)\nexcept Exception as e:\n    print(f\"Error: {e}\")\n\n# GOOD: specific, actionable error messages\ntry:\n    conn = sqlite3.connect(db_path)\nexcept FileNotFoundError:\n    print(f\"Database not found at: {db_path}\")\n    print(\"Check that the path is correct and the file exists.\")\n    raise  # re-raise so the caller knows it failed\nexcept sqlite3.OperationalError as e:\n    print(f\"Database connection failed: {e}\")\n    print(\"The database may be locked or corrupted.\")\n    raise",
+    "senior_tip": "I test every script's error handling by intentionally breaking it — wrong path, wrong permissions, corrupted file. If the error message doesn't tell me exactly what to fix, I rewrite it.",
+    "book_source": "Al Sweigart — Automate the Boring Stuff with Python 2e, Chapter 11 (Files)"
+  },
+  {
+    "id": "groupby-split-apply-combine",
+    "title": "The split-apply-combine pattern: how groupby really works",
+    "week_unlock": 6,
+    "track": "python",
+    "teaser": "groupby isn't magic — it's three steps you can visualize.",
+    "content": "McKinney's Chapter 10 introduces the split-apply-combine framework: every groupby operation is three steps. (1) Split: divide the DataFrame into groups based on the key column(s). (2) Apply: run a function on each group independently. (3) Combine: concatenate the results back into a single DataFrame. Understanding these three steps explains everything confusing about groupby: why groupby() returns a GroupBy object (nothing has happened yet — the split hasn't run), why you can apply any function with .apply(), and why some operations produce a Series and others produce a DataFrame. Visualize these three steps before you write the code.",
+    "code_example": "import pandas as pd\n\ndf = pd.DataFrame({\n    'category': ['Entrees', 'Entrees', 'Sides', 'Sides', 'Drinks'],\n    'item': ['Orange Chicken', 'Broccoli Beef', 'Chow Mein', 'Rice', 'Tea'],\n    'revenue': [4900, 3500, 1200, 800, 600]\n})\n\n# Step 1 — Split (creates groups, nothing computed yet)\ngrouped = df.groupby('category')\n\n# Step 2 — Apply (run aggregation on each group)\n# Step 3 — Combine (result is a new DataFrame)\nresult = grouped['revenue'].agg(['sum', 'mean', 'count'])\nprint(result)\n\n# Named aggregations (McKinney's preferred modern syntax)\nresult = df.groupby('category').agg(\n    total_revenue=('revenue', 'sum'),\n    avg_per_item=('revenue', 'mean'),\n    item_count=('revenue', 'count')\n)",
+    "senior_tip": "When a groupby gives me unexpected results, I call .get_group('category_name') to inspect exactly what went into one group. The problem is almost always in the split step.",
+    "book_source": "Wes McKinney — Python for Data Analysis 3e, Chapter 10 (Data Aggregation and Group Operations)"
+  },
+  {
+    "id": "having-vs-where",
+    "title": "HAVING vs WHERE: the order of operations matters",
+    "week_unlock": 3,
+    "track": "sql",
+    "teaser": "SQL executes in a specific order. HAVING comes after GROUP BY. WHERE comes before.",
+    "content": "Iliev's book is explicit about SQL's logical execution order: (1) FROM and JOINs, (2) WHERE, (3) GROUP BY, (4) HAVING, (5) SELECT, (6) ORDER BY, (7) LIMIT. This order has a practical consequence: WHERE filters happen BEFORE grouping, so you cannot reference an aggregated column (like SUM(revenue)) in a WHERE clause. HAVING filters happen AFTER grouping, so you can. The most common mistake: writing WHERE SUM(revenue) > 1000 and being confused when it fails. The fix is always HAVING SUM(revenue) > 1000. Memorize the execution order — it explains most SQL error messages.",
+    "code_example": "-- WRONG: cannot use aggregate in WHERE\nSELECT category, SUM(revenue) as total\nFROM sales\nWHERE SUM(revenue) > 1000  -- ERROR: invalid use of aggregate\nGROUP BY category;\n\n-- CORRECT: aggregate filter goes in HAVING\nSELECT category, SUM(revenue) as total\nFROM sales\nWHERE sale_date >= '2024-01-01'  -- row-level filter: goes in WHERE\nGROUP BY category\nHAVING SUM(revenue) > 1000;  -- group-level filter: goes in HAVING\n\n-- Remember: WHERE filters ROWS, HAVING filters GROUPS",
+    "senior_tip": "I think of WHERE as a bouncer at the door (filters who gets in) and HAVING as a judge at the end (filters groups after they've been formed).",
+    "book_source": "Bobby Iliev — Introduction to SQL, Chapter 4 (GROUP BY and Aggregates)"
+  },
+  {
+    "id": "kimball-grain",
+    "title": "Kimball's 'grain' concept: the most important design decision",
+    "week_unlock": 13,
+    "track": "sql",
+    "teaser": "Every fact table has a grain. Getting it wrong breaks everything.",
+    "content": "Kimball's Toolkit identifies declaring the grain as the most critical step in dimensional modeling. The grain is 'the most atomic level at which data is captured' — it defines exactly what one row in the fact table represents. Examples: one row = one transaction line item (finest grain), or one row = one daily store summary (coarser grain). The rule: always model at the finest possible grain you have. Why? You can always aggregate finer-grain data to coarser levels, but you can never disaggregate coarser-grain data. A fact table with grain 'one row per daily store total' cannot answer 'what was the revenue at 3pm?' A fact table with grain 'one row per transaction' can answer both questions.",
+    "code_example": "-- WRONG grain: one row per day per store (too coarse)\nCREATE TABLE fact_sales_daily (\n  date_key INT,\n  store_key INT,\n  total_revenue DECIMAL,  -- can't break this down further!\n  order_count INT\n);\n\n-- RIGHT grain: one row per order line item (finest available)\nCREATE TABLE fact_sales (\n  sale_key INT PRIMARY KEY,  -- surrogate key\n  date_key INT,              -- FK to dim_date\n  store_key INT,             -- FK to dim_store\n  product_key INT,           -- FK to dim_product\n  customer_key INT,          -- FK to dim_customer\n  quantity INT,\n  unit_price DECIMAL,\n  discount_amount DECIMAL,\n  extended_amount DECIMAL    -- pre-calculated: qty * price - discount\n);",
+    "senior_tip": "Before I design any fact table, I write one sentence: 'One row in this table represents ___.' If I can't complete that sentence clearly, I don't have a grain yet.",
+    "book_source": "Ralph Kimball — The Data Warehouse Toolkit, Chapter 1 (Four-Step Dimensional Design Process)"
+  },
+  {
+    "id": "time-series-index",
+    "title": "Why pandas time series requires a DatetimeIndex",
+    "week_unlock": 7,
+    "track": "python",
+    "teaser": "resample() doesn't work until you set the right index.",
+    "content": "McKinney's Chapter 11 on time series explains the architectural decision: pandas time series operations (resample, rolling, shift, asfreq) require that the time column be the DataFrame index, not a regular column. This is because pandas needs to know the temporal ordering and frequency of rows to perform time-aware operations. When you call df.resample('W'), pandas uses the DatetimeIndex to group rows into weekly buckets — it can't do this if the date is just another column. The pattern: always convert your date column to a DatetimeIndex before any time series operation. Use df.set_index('date_column') or pass parse_dates=['date_col'] to pd.read_csv().",
+    "code_example": "import pandas as pd\n\n# Load with date as regular column\ndf = pd.read_csv('sales.csv')\n\n# Trap: resample fails\n# df.resample('W')['revenue'].sum()  # TypeError!\n\n# Fix 1: convert on load\ndf = pd.read_csv('sales.csv', parse_dates=['date'], index_col='date')\n\n# Fix 2: convert after load\ndf['date'] = pd.to_datetime(df['date'])\ndf = df.set_index('date')\n\n# Now time series operations work\nweekly = df['revenue'].resample('W').sum()\nmonthly = df['revenue'].resample('ME').sum()\nrolling_4wk = df['revenue'].resample('W').sum().rolling(4).mean()\n\nprint(weekly.pct_change()  # week-over-week % change",
+    "senior_tip": "I always check df.index after loading time series data. If it's a RangeIndex (0, 1, 2...) instead of a DatetimeIndex, resample will fail and I haven't set the index yet.",
+    "book_source": "Wes McKinney — Python for Data Analysis 3e, Chapter 11 (Time Series)"
+  },
+  {
+    "id": "functions-first-class",
+    "title": "Functions as first-class objects: Sweigart's 'programming trick'",
+    "week_unlock": 8,
+    "track": "python",
+    "teaser": "Passing functions as arguments unlocks an entire paradigm.",
+    "content": "Sweigart introduces this in Automate the Boring Stuff as 'one of the most powerful things about Python': functions are objects, just like integers and strings. You can store a function in a variable, pass it as an argument to another function, and return it from a function. This unlocks the pattern McKinney uses throughout pandas: df.apply(some_function), df.groupby().agg(some_function), df.sort_values(key=some_function). Once you understand that these just accept any callable as an argument, the entire pandas API becomes consistent and predictable. It also enables you to build configurable pipelines: instead of hardcoding behavior, pass the behavior as a function parameter.",
+    "code_example": "# Functions are objects — you can pass them around\ndef double(x):\n    return x * 2\n\ndef apply_to_list(func, items):\n    return [func(item) for item in items]\n\nresult = apply_to_list(double, [1, 2, 3])  # [2, 4, 6]\n\n# This is exactly how pandas .apply() works\nimport pandas as pd\ndf = pd.DataFrame({'revenue': [100, 200, 300]})\n\n# Pass a function by name (not calling it with ())\ndf['doubled'] = df['revenue'].apply(double)\n\n# Or pass a lambda (anonymous function) inline\ndf['taxed'] = df['revenue'].apply(lambda x: x * 1.0875)\n\n# Configurable pipeline: behavior as a parameter\ndef process_data(df, transform_func):\n    df['processed'] = df['revenue'].apply(transform_func)\n    return df",
+    "senior_tip": "Understanding that functions are objects changed how I design systems. Instead of if/elif chains to handle different cases, I build a dict mapping case names to functions and look up the right one.",
+    "book_source": "Al Sweigart — Automate the Boring Stuff with Python 2e, Chapter 3 (Functions)"
   }
 ]

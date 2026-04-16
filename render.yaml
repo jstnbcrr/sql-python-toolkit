@@ -6,7 +6,7 @@ services:
     startCommand: node server/index.cjs
     envVars:
       - key: ANTHROPIC_API_KEY
-        sync: false
-      - key: PORT
-        value: 3001
+        sync: false          # set manually in Render dashboard
+      - key: FRONTEND_URL
+        sync: false          # set to your Vercel URL, e.g. https://your-app.vercel.app
     plan: free

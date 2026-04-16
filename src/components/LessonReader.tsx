@@ -59,10 +59,10 @@ function renderInlineText(
   text: string,
   onTermClick?: (term: string) => void
 ): React.ReactNode[] {
-  // Split on backtick inline code, CAPS WORDS, and "quoted phrases"
+  // Split on **bold**, backtick inline code, "quoted phrases", and CAPS WORDS
   const parts: React.ReactNode[] = []
-  // Combined regex: backtick code | "quoted phrase" | CAPS (2+ letters)
-  const regex = /(`[^`]+`)|("([^"]+)")|(\b[A-Z][A-Z_]{1,}[A-Z]\b)/g
+  // Combined regex: **bold** | backtick code | "quoted phrase" | CAPS (2+ letters)
+  const regex = /(\*\*([^*]+)\*\*)|(`[^`]+`)|("([^"]+)")|(\b[A-Z][A-Z_]{1,}[A-Z]\b)/g
   let lastIdx = 0
   let match: RegExpExecArray | null
 
@@ -73,8 +73,15 @@ function renderInlineText(
     }
 
     if (match[1]) {
+      // **bold**
+      parts.push(
+        <strong key={match.index} className="font-bold text-white">
+          {match[2]}
+        </strong>
+      )
+    } else if (match[3]) {
       // Inline code
-      const code = match[1].slice(1, -1)
+      const code = match[3].slice(1, -1)
       parts.push(
         <code
           key={match.index}
@@ -83,9 +90,9 @@ function renderInlineText(
           {code}
         </code>
       )
-    } else if (match[2]) {
+    } else if (match[4]) {
       // Quoted phrase — clickable term
-      const term = match[3]
+      const term = match[5]
       parts.push(
         <span
           key={match.index}
@@ -96,9 +103,9 @@ function renderInlineText(
           "{term}"
         </span>
       )
-    } else if (match[4]) {
+    } else if (match[6]) {
       // CAPS term
-      const term = match[4]
+      const term = match[6]
       parts.push(
         <span
           key={match.index}

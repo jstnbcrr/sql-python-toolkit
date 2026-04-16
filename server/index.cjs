@@ -16,7 +16,11 @@ const allowedOrigins = [
 ].filter(Boolean);
 const apiCors = cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow: no origin (curl/health checks), localhost dev, configured FRONTEND_URL,
+    // and any *.onrender.com URL (same-service — same-origin POST includes Origin header)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (origin.endsWith('.onrender.com')) return callback(null, true);
     callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,

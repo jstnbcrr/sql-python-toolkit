@@ -2,9 +2,11 @@ services:
   - type: web
     name: sage-backend
     runtime: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: node server/index.cjs
     envVars:
       - key: ANTHROPIC_API_KEY
-        sync: false          # set manually in Render dashboard
+        sync: false
+      - key: NODE_ENV
+        value: production
     plan: free

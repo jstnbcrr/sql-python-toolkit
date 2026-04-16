@@ -83,8 +83,19 @@ export default function SQLEditor({
 
     async function initDB() {
       try {
+        // Wait for CDN script to expose initSqlJs (it loads asynchronously)
+        let attempts = 0
+        while (typeof initSqlJs === 'undefined' && attempts < 50) {
+          await new Promise(r => setTimeout(r, 100))
+          attempts++
+        }
+        if (typeof initSqlJs === 'undefined') {
+          throw new Error('sql.js failed to load from CDN')
+        }
+
         const SQL = await initSqlJs({
-          locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+          locateFile: (file: string) =>
+            `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
         })
 
         const response = await fetch(`/datasets/${datasetName}`)

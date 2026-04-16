@@ -19,7 +19,15 @@
       "Bash(ls -lh public/datasets/*.db)",
       "Bash(gh auth:*)",
       "Bash(node -e ':*)",
-      "Bash(xxd \"/Users/justin/Learning Python and SQL App/.env\")"
+      "Bash(xxd \"/Users/justin/Learning Python and SQL App/.env\")",
+      "Bash(sed 's/```/~~~/g' src/data/lessons.ts)",
+      "Bash(mv /tmp/lessons_fixed.ts src/data/lessons.ts)",
+      "Bash(python3 -c ':*)",
+      "Bash(grep -n '\\\\${' src/data/lessons.ts)",
+      "Bash(grep -v '\\\\\\\\\\\\\\\\${')",
+      "Bash(lsof -iTCP -sTCP:LISTEN)",
+      "Read(//Users/justin/DATA WAREHOUSE TOOL KIT/**)",
+      "Bash(npm start:*)"
     ]
   }
 }

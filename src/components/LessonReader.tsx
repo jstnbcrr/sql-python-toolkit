@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { getWeekByNumber, WeekDefinition } from '@/data/curriculum'
+import { getWeekLesson } from '@/data/lessons'
 
 // ─── icons ────────────────────────────────────────────────────────────────────
 
@@ -234,8 +235,8 @@ interface ContentBlock {
 
 function parseContentBlocks(content: string): ContentBlock[] {
   const blocks: ContentBlock[] = []
-  // Match triple-backtick fences
-  const fenceRegex = /```(\w+)?\n?([\s\S]*?)```/g
+  // Match triple-backtick OR triple-tilde fences
+  const fenceRegex = /(?:```|~~~)(\w+)?\n?([\s\S]*?)(?:```|~~~)/g
   // Match 4-space indented code blocks
   const indentRegex = /^(    .+\n?)+/gm
 
@@ -370,17 +371,25 @@ const LessonReader: React.FC<LessonReaderProps> = ({
     })
   }
 
-  // Content sections derived from WeekDefinition static data
-  const contentSections = [
+  // Load real lesson content
+  const lessonData = getWeekLesson(week)
+  const sqlSections = lessonData?.sql ?? [
     {
       title: 'SQL: ' + weekDef.sqlTopic,
-      content: `This week covers the SQL topic: **${weekDef.sqlTopic}**.\n\nFull lesson content loads after running parse_content.py against your course books.\n\nThe parsed content will include detailed explanations, worked examples, and syntax breakdowns for each concept listed above.`,
-    },
-    {
-      title: 'Python: ' + weekDef.pythonTopic,
-      content: `This week's Python track covers: **${weekDef.pythonTopic}**.\n\nFull lesson content loads after running parse_content.py against your course books.\n\nYou'll learn how these Python concepts mirror what you just learned in SQL — same logic, different syntax.`,
+      content: `Lesson content for ${weekDef.sqlTopic} is coming soon.`,
     },
   ]
+  const pythonSections = lessonData?.python ?? [
+    {
+      title: 'Python: ' + weekDef.pythonTopic,
+      content: `Lesson content for ${weekDef.pythonTopic} is coming soon.`,
+    },
+  ]
+
+  const contentSections =
+    activeTrack === 'sql'
+      ? sqlSections.map(s => ({ ...s, title: s.title.startsWith('SQL') ? s.title : 'SQL: ' + s.title }))
+      : pythonSections.map(s => ({ ...s, title: s.title.startsWith('Python') ? s.title : 'Python: ' + s.title }))
 
   const trackColor = activeTrack === 'sql' ? '#00D4FF' : '#FFB347'
 
@@ -544,11 +553,6 @@ const LessonReader: React.FC<LessonReaderProps> = ({
 
         {/* Content sections */}
         {contentSections
-          .filter(s => {
-            if (initialTrack !== 'both') return true
-            if (activeTrack === 'sql') return s.title.toLowerCase().startsWith('sql')
-            return s.title.toLowerCase().startsWith('python')
-          })
           .map((section, i) => (
             <motion.div
               key={section.title}

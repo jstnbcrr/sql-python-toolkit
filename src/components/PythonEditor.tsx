@@ -81,7 +81,7 @@ async function getPyodide(): Promise<PyodideInstance> {
     const py = await window.loadPyodide!({
       indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.2/full/',
     })
-    await py.loadPackage(['pandas', 'numpy', 'micropip'])
+    await py.loadPackage(['pandas', 'numpy', 'micropip', 'sqlite3'])
     window._pyodideInstance = py
     return py
   })()

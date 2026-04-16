@@ -300,12 +300,16 @@ Keep it tight. This is a teaching moment, not a lecture.`;
 const fs = require('fs');
 const distPath = path.resolve(__dirname, '..', 'dist');
 
-// Diagnostic: visit /api/health to confirm build artifacts exist
+// Diagnostic: visit /api/health to confirm build artifacts and API key
 app.get('/api/health', (req, res) => {
   const distExists = fs.existsSync(distPath);
   const indexExists = fs.existsSync(path.join(distPath, 'index.html'));
   const contents = distExists ? fs.readdirSync(distPath) : [];
-  res.json({ distPath, distExists, indexExists, contents });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  res.json({
+    distPath, distExists, indexExists, contents,
+    apiKey: apiKey ? `✓ loaded (starts with ${apiKey.slice(0, 10)}...)` : '✗ MISSING',
+  });
 });
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');

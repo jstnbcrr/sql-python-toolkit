@@ -16,7 +16,10 @@
       "Bash(npm run:*)",
       "Bash(curl -s http://localhost:5173)",
       "Bash(sort -k5 -hr)",
-      "Bash(ls -lh public/datasets/*.db)"
+      "Bash(ls -lh public/datasets/*.db)",
+      "Bash(gh auth:*)",
+      "Bash(node -e ':*)",
+      "Bash(xxd \"/Users/justin/Learning Python and SQL App/.env\")"
     ]
   }
 }

@@ -300,6 +300,20 @@ Keep it tight. This is a teaching moment, not a lecture.`;
 const fs = require('fs');
 const distPath = path.resolve(__dirname, '..', 'dist');
 
+// Diagnostic: visit /api/sage-test to confirm Anthropic API works
+app.get('/api/sage-test', async (req, res) => {
+  try {
+    const msg = await client.messages.create({
+      model: MODEL,
+      max_tokens: 20,
+      messages: [{ role: 'user', content: 'say hi' }],
+    });
+    res.json({ ok: true, reply: msg.content[0].text, model: MODEL });
+  } catch (err) {
+    res.json({ ok: false, error: err.message, model: MODEL });
+  }
+});
+
 // Diagnostic: visit /api/health to confirm build artifacts and API key
 app.get('/api/health', (req, res) => {
   const distExists = fs.existsSync(distPath);

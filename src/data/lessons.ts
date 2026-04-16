@@ -75,13 +75,13 @@ His rundown: "SELECT — First, we specify the action we want to execute. * — 
 In our context:
 
 ~~~sql
-SELECT * FROM menu;
+SELECT * FROM menu_items;
 ~~~
 
 This returns every row, every column. The \`*\` is a wildcard meaning "all columns." For exploration it's fine. For production queries, you want to name the columns explicitly:
 
 ~~~sql
-SELECT item_name, price FROM menu;
+SELECT name, price FROM menu_items;
 ~~~
 
 This returns only the item name and price. When a table has 30 columns and you need 3, naming them is essential.
@@ -89,8 +89,8 @@ This returns only the item name and price. When a table has 30 columns and you n
 **ORDER BY** — control the sort order:
 
 ~~~sql
-SELECT item_name, price
-FROM menu
+SELECT name, price
+FROM menu_items
 ORDER BY price DESC;
 ~~~
 
@@ -99,8 +99,8 @@ ORDER BY price DESC;
 **LIMIT** — cap the result:
 
 ~~~sql
-SELECT item_name, price
-FROM menu
+SELECT name, price
+FROM menu_items
 ORDER BY price DESC
 LIMIT 5;
 ~~~
@@ -112,7 +112,7 @@ The 5 most expensive items. Iliev notes that clause order matters: SELECT → FR
         content: `**DISTINCT** removes duplicate values from results. Use it when you want to know what unique values exist:
 
 ~~~sql
-SELECT DISTINCT category FROM menu;
+SELECT DISTINCT category FROM menu_items;
 ~~~
 
 Without DISTINCT you'd get one row per menu item, category repeated for each. With it — one row per category.
@@ -123,18 +123,18 @@ Without DISTINCT you'd get one row per menu item, category repeated for each. Wi
 
 ~~~sql
 -- Items whose name ends with "Chicken"
-SELECT * FROM menu WHERE item_name LIKE '%Chicken';
+SELECT * FROM menu_items WHERE name LIKE '%Chicken';
 
 -- Items whose name contains "rice" anywhere
-SELECT * FROM menu WHERE item_name LIKE '%rice%';
+SELECT * FROM menu_items WHERE name LIKE '%rice%';
 
 -- Items starting with exactly one character then "ried"
-SELECT * FROM menu WHERE item_name LIKE '_ried%';
+SELECT * FROM menu_items WHERE name LIKE '_ried%';
 ~~~
 
 Iliev's example from the book: \`SELECT * FROM users WHERE username LIKE '%y'\` — finds usernames ending with the letter y. Same logic, different table.
 
-Run \`SELECT DISTINCT category FROM menu\` first. That tells you what categories exist. Then use LIKE to explore naming patterns. That two-step exploration is how you start with any new dataset.`,
+Run \`SELECT DISTINCT category FROM menu_items\` first. That tells you what categories exist. Then use LIKE to explore naming patterns. That two-step exploration is how you start with any new dataset.`,
       },
     ],
     python: [
@@ -256,7 +256,7 @@ Comparison operators:
 - \`>=\` greater than or equal, \`<=\` less than or equal
 
 ~~~sql
-SELECT item_name, price FROM orders
+SELECT name, price FROM orders
 WHERE price > 5.00;
 
 SELECT * FROM orders
@@ -354,10 +354,10 @@ Both endpoints are included. This is equivalent to \`price >= 4.00 AND price <= 
 
 ~~~sql
 -- Items starting with "Orange"
-SELECT * FROM orders WHERE item_name LIKE 'Orange%';
+SELECT * FROM orders WHERE name LIKE 'Orange%';
 
 -- Items containing "Chicken" anywhere
-SELECT * FROM orders WHERE item_name LIKE '%Chicken%';
+SELECT * FROM orders WHERE name LIKE '%Chicken%';
 ~~~
 
 These aren't just shortcuts — they make queries easier to maintain. If you add a new category later, you change one line in the IN list rather than adding another OR.`,
@@ -1521,7 +1521,7 @@ Iliev's rundown: "INSERT INTO — specifies the table. The column list tells MyS
 ~~~sql
 UPDATE menu
 SET price = 7.49
-WHERE item_name = 'Orange Chicken';
+WHERE name = 'Orange Chicken';
 ~~~
 
 Iliev's warning: "If we don't specify a WHERE clause, all of the entries from the table will be affected." Always include a WHERE clause unless you intentionally want to update every row.
@@ -1529,7 +1529,7 @@ Iliev's warning: "If we don't specify a WHERE clause, all of the entries from th
 **DELETE** — Iliev: "The DELETE statement would remove data from your database":
 
 ~~~sql
-DELETE FROM menu WHERE id = 12;
+DELETE FROM menu_items WHERE id = 12;
 ~~~
 
 Same warning applies: DELETE without WHERE deletes everything. In production systems you'd use a transaction to wrap modifications so you can roll back if something goes wrong.
@@ -1537,13 +1537,13 @@ Same warning applies: DELETE without WHERE deletes everything. In production sys
 **Comments** — Iliev covers inline and block comments:
 
 ~~~sql
-SELECT * FROM menu; -- Get all menu items
+SELECT * FROM menu_items; -- Get all menu items
 
 /*
   This query pulls active items only.
   Updated 2024-01 by Justin Becerra
 */
-SELECT * FROM menu WHERE active = 1;
+SELECT * FROM menu_items WHERE active = 1;
 ~~~`,
       },
     ],

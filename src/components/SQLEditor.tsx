@@ -56,7 +56,7 @@ function LoadingSpinner({ label }: { label: string }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SQLEditor({
-  initialCode = 'SELECT * FROM menu LIMIT 10;',
+  initialCode = 'SELECT * FROM menu_items LIMIT 10;',
   datasetName,
   week,
   onSuccess,

@@ -293,7 +293,13 @@ Keep it tight. This is a teaching moment, not a lecture.`;
 });
 
 // ─── Serve React frontend in production ──────────────────────────────────────
+// COEP/COOP headers are required for SharedArrayBuffer (sql.js + Pyodide WASM)
 const distPath = path.resolve(__dirname, '..', 'dist');
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  next();
+});
 app.use(express.static(distPath));
 app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));

@@ -7,18 +7,21 @@ const Anthropic = require('@anthropic-ai/sdk');
 const app = express();
 const PORT = process.env.PORT || 3002;
 
+// CORS only on /api routes — static file requests are same-origin and don't need it.
+// Vite generates <script type="module" crossorigin> which sends an Origin header
+// even for same-origin requests; applying CORS globally blocked those with a 500.
 const allowedOrigins = [
   'http://localhost:5174',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
-app.use(cors({
+const apiCors = cors({
   origin: (origin, callback) => {
-    // allow requests with no origin (curl, Render health checks)
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
-}));
+});
+app.use('/api', apiCors);
 app.use(express.json({ limit: '2mb' }));
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });

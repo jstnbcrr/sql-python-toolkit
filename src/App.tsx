@@ -18,8 +18,9 @@ const PhaseGate = lazy(() => import('@/components/PhaseGate'))
 const SeniorInsightCollection = lazy(() =>
   import('@/components/SeniorInsight').then(m => ({ default: m.SeniorInsightCollection }))
 )
+const AccountSettings = lazy(() => import('@/components/AccountSettings'))
 
-type AppView = 'dashboard' | 'lesson' | 'editor' | 'project' | 'gate' | 'insights'
+type AppView = 'dashboard' | 'lesson' | 'editor' | 'project' | 'gate' | 'insights' | 'settings'
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-full">
@@ -217,6 +218,7 @@ export default function App() {
                     <Dashboard
                       onSelectWeek={handleSelectWeek}
                       onViewInsights={() => setView('insights')}
+                      onOpenSettings={() => setView('settings')}
                     />
                   )}
                   {view === 'lesson' && (
@@ -272,6 +274,15 @@ export default function App() {
                   )}
                   {view === 'insights' && (
                     <SeniorInsightCollection onClose={() => setView('dashboard')} />
+                  )}
+                  {view === 'settings' && (
+                    <AccountSettings
+                      onClose={() => setView('dashboard')}
+                      onDeleted={() => {
+                        setShowAuth(true)
+                        window.location.reload()
+                      }}
+                    />
                   )}
                 </motion.div>
               </AnimatePresence>

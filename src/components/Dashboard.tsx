@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { useProgressStore, LEVEL_NAMES, xpToNextLevel } from '@/store/progress'
+import { useProfilesStore } from '@/store/profiles'
 import { WEEKS, getWeekByNumber, PHASE_NAMES, PHASE_RANGES } from '@/data/curriculum'
 import ProgressBar from './ProgressBar'
 
@@ -178,9 +179,13 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, accent = '#8B949E', i
 interface DashboardProps {
   onSelectWeek: (week: number) => void
   onViewInsights: () => void
+  onOpenSettings: () => void
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onSelectWeek, onViewInsights }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onSelectWeek, onViewInsights, onOpenSettings }) => {
+  const activeProfile = useProfilesStore(s => s.getActiveProfile())
+  const displayName = activeProfile?.name || 'Learner'
+
   const {
     xp,
     level,
@@ -239,7 +244,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectWeek, onViewInsights }) =
           <div>
             <h1 className="text-3xl font-display font-bold text-white">
               Welcome back,{' '}
-              <span className="text-[#00D4FF]">Justin</span>
+              <span className="text-[#00D4FF]">{displayName}</span>
             </h1>
             <p className="text-sm text-[#8B949E] font-mono mt-0.5">
               {formatDate(new Date())}
@@ -261,6 +266,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onSelectWeek, onViewInsights }) =
               <StarIcon className="w-3 h-3" />
               <span>Level {level} — {levelName}</span>
             </div>
+
+            {/* Settings button */}
+            <button
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 bg-[#161B22] border border-[#30363D] rounded-full px-3 py-1.5 text-[#8B949E] hover:text-white hover:border-[#8B949E] transition-all text-xs font-mono"
+              title="Account Settings"
+            >
+              ⚙ Settings
+            </button>
           </div>
         </motion.div>
 

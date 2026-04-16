@@ -19,6 +19,7 @@ const SeniorInsightCollection = lazy(() =>
   import('@/components/SeniorInsight').then(m => ({ default: m.SeniorInsightCollection }))
 )
 const AccountSettings = lazy(() => import('@/components/AccountSettings'))
+const OnboardingTour = lazy(() => import('@/components/OnboardingTour'))
 
 type AppView = 'dashboard' | 'lesson' | 'editor' | 'project' | 'gate' | 'insights' | 'settings'
 
@@ -57,6 +58,18 @@ export default function App() {
 
   // Bottom sheet state for mobile Sage
   const [sageSheetOpen, setSageSheetOpen] = useState(false)
+
+  // Onboarding tour — shown once per new profile
+  const [showTour, setShowTour] = useState(false)
+
+  useEffect(() => {
+    if (!showAuth) {
+      const profile = useProfilesStore.getState().getActiveProfile()
+      if (profile && !profile.hasSeenTour) {
+        setShowTour(true)
+      }
+    }
+  }, [showAuth])
 
   const weekDef = getWeekByNumber(currentWeek)
   const phaseName = PHASE_NAMES[currentPhase]
@@ -340,6 +353,21 @@ export default function App() {
           ))}
         </nav>
       )}
+
+      {/* ── Onboarding tour ──────────────────────────────────── */}
+      <AnimatePresence>
+        {showTour && (
+          <Suspense fallback={null}>
+            <OnboardingTour
+              onComplete={() => {
+                const profile = useProfilesStore.getState().getActiveProfile()
+                if (profile) useProfilesStore.getState().markTourSeen(profile.id)
+                setShowTour(false)
+              }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
 
       {/* ── Mobile Sage bottom sheet ──────────────────────────── */}
       {isMobile && (

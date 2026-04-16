@@ -9,6 +9,7 @@ export interface Profile {
   createdAt: string
   isGuest: boolean
   avatar: string        // Two-letter initials
+  hasSeenTour: boolean
 }
 
 interface ProfilesState {
@@ -22,6 +23,7 @@ interface ProfilesState {
   updateProfile: (id: string, updates: Partial<Pick<Profile, 'name' | 'context' | 'passwordHash'>>) => void
   deleteProfile: (id: string) => void
   logout: () => void
+  markTourSeen: (profileId: string) => void
 }
 
 function makeId(): string {
@@ -61,6 +63,7 @@ export const useProfilesStore = create<ProfilesState>()(
           createdAt: new Date().toISOString(),
           isGuest,
           avatar: getInitials(displayName),
+          hasSeenTour: false,
         }
 
         // Migrate existing progress data when creating the very first real profile
@@ -126,6 +129,14 @@ export const useProfilesStore = create<ProfilesState>()(
           localStorage.removeItem('sage-active-profile')
         } catch { /* ignore */ }
         set({ activeProfileId: null })
+      },
+
+      markTourSeen: (profileId) => {
+        set(state => ({
+          profiles: state.profiles.map(p =>
+            p.id === profileId ? { ...p, hasSeenTour: true } : p
+          ),
+        }))
       },
     }),
     { name: 'sage-profiles', version: 1 }

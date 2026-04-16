@@ -2,11 +2,9 @@ services:
   - type: web
     name: sage-backend
     runtime: node
-    buildCommand: npm install
+    buildCommand: npm install && npm run build
     startCommand: node server/index.cjs
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false          # set manually in Render dashboard
-      - key: FRONTEND_URL
-        sync: false          # set to your Vercel URL, e.g. https://your-app.vercel.app
     plan: free

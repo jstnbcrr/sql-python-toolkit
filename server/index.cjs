@@ -1,6 +1,7 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '..', '.env') });
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
@@ -289,6 +290,13 @@ Keep it tight. This is a teaching moment, not a lecture.`;
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// ─── Serve React frontend in production ──────────────────────────────────────
+const distPath = path.resolve(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 app.listen(PORT, () => {

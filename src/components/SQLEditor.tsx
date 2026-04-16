@@ -74,6 +74,8 @@ export default function SQLEditor({
   const [queryError, setQueryError] = useState<string | null>(null)
   const [showHint, setShowHint] = useState(false)
   const [showEasier, setShowEasier] = useState(false)
+  const [showSchema, setShowSchema] = useState(false)
+  const [schema, setSchema] = useState<{ table: string; columns: { name: string; type: string }[] }[]>([])
   const dbRef = useRef<Database | null>(null)
   const editorRef = useRef<unknown>(null)
 
@@ -108,6 +110,26 @@ export default function SQLEditor({
         if (!cancelled) {
           dbRef.current = db
           setDbStatus('ready')
+
+          // Load schema: all tables and their columns
+          try {
+            const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+            if (tables.length > 0) {
+              const schemaData = (tables[0].values as string[][]).map(([tableName]) => {
+                const cols = db.exec(`PRAGMA table_info(${tableName})`)
+                const columns = cols.length > 0
+                  ? (cols[0].values as unknown[][]).map(row => ({
+                      name: String(row[1]),
+                      type: String(row[2] || 'TEXT'),
+                    }))
+                  : []
+                return { table: tableName, columns }
+              })
+              if (!cancelled) setSchema(schemaData)
+            }
+          } catch {
+            // schema load failure is non-fatal
+          }
         }
       } catch (err) {
         if (!cancelled) {
@@ -216,6 +238,22 @@ export default function SQLEditor({
             <DatabaseIcon />
             {datasetName}
           </span>
+
+          {/* Schema button */}
+          {schema.length > 0 && (
+            <button
+              className={`flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded border transition-all ${
+                showSchema
+                  ? 'bg-accent-sql/10 border-accent-sql/40 text-accent-sql'
+                  : 'bg-bg-primary border-border-default text-accent-muted hover:border-accent-sql/30 hover:text-accent-sql'
+              }`}
+              onClick={() => setShowSchema(v => !v)}
+              title="View database tables and columns"
+            >
+              <TableIcon />
+              Schema
+            </button>
+          )}
         </div>
 
         {/* Right: secondary actions */}
@@ -245,6 +283,42 @@ export default function SQLEditor({
           )}
         </div>
       </div>
+
+      {/* Schema panel */}
+      <AnimatePresence>
+        {showSchema && schema.length > 0 && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-b border-border-default"
+          >
+            <div className="px-3 py-2.5 bg-bg-primary flex flex-wrap gap-3">
+              {schema.map(({ table, columns }) => (
+                <div key={table} className="min-w-[140px]">
+                  <div
+                    className="flex items-center gap-1.5 text-xs font-mono font-semibold text-accent-sql mb-1.5 cursor-pointer hover:opacity-80"
+                    onClick={() => setCode(`SELECT * FROM ${table} LIMIT 10;`)}
+                    title={`Click to query ${table}`}
+                  >
+                    <TableIcon />
+                    {table}
+                  </div>
+                  <ul className="space-y-0.5">
+                    {columns.map(col => (
+                      <li key={col.name} className="flex items-center gap-1.5 text-[11px] font-mono">
+                        <span className="text-[#E6EDF3]/80">{col.name}</span>
+                        <span className="text-accent-muted/60 text-[10px]">{col.type}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Hint banner */}
       <AnimatePresence>
@@ -435,17 +509,22 @@ export default function SQLEditor({
 
 function DatabaseIcon() {
   return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="opacity-60"
-    >
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-60">
       <ellipse cx="8" cy="4" rx="6" ry="2.5" stroke="currentColor" strokeWidth="1.5" />
       <path d="M2 4v4c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5V4" stroke="currentColor" strokeWidth="1.5" />
       <path d="M2 8v4c0 1.38 2.69 2.5 6 2.5s6-1.12 6-2.5V8" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+}
+
+// ─── Table SVG icon ───────────────────────────────────────────────────────────
+
+function TableIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-70">
+      <rect x="1" y="1" width="14" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M1 5h14" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6 5v10" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   )
 }

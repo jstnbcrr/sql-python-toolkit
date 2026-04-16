@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(pip3 --version)",
+      "Bash(npm create:*)",
+      "Bash(npx create-vite@latest . --template react-ts)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npm install:*)",
+      "Bash(npm show:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python3 scripts/generate_datasets.py)",
+      "Bash(python3 scripts/parse_content.py)",
+      "Bash(npm run:*)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(sort -k5 -hr)",
+      "Bash(ls -lh public/datasets/*.db)"
+    ]
+  }
+}

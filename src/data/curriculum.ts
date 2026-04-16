@@ -1,0 +1,615 @@
+export interface WeekDefinition {
+  week: number
+  phase: 1 | 2 | 3 | 4
+  title: string
+  subtitle: string
+  sqlTopic: string
+  pythonTopic: string
+  analogy: string
+  realWorldContext: string
+  miniProject: MiniProjectDef | null
+  phaseGate: boolean
+  dataset: string
+  learningObjectives: string[]
+}
+
+export interface MiniProjectDef {
+  name: string
+  briefing: string
+  requirements: string[]
+  testCases: TestCase[]
+  successCriteria: string
+}
+
+export interface TestCase {
+  id: string
+  description: string
+  type: 'sql' | 'python' | 'both'
+  input?: string
+  expectedOutput?: string
+}
+
+export const WEEKS: WeekDefinition[] = [
+  {
+    week: 1,
+    phase: 1,
+    title: 'What Even is Data?',
+    subtitle: 'Databases, tables, and your first SELECT',
+    sqlTopic: 'SELECT, FROM, basic queries, what is a database',
+    pythonTopic: 'Variables, data types, print(), input()',
+    analogy: 'A database is like a restaurant\'s order system. A table is like the menu. SQL is how you ask for things from the menu. Python is the cook who does something with what you ordered.',
+    realWorldContext: 'You\'re the new manager at a Panda Express location. You\'ve got a computer with the menu database. How do you look up all the items?',
+    miniProject: null,
+    phaseGate: false,
+    dataset: 'week1_menu.db',
+    learningObjectives: [
+      'Understand what a relational database is and why it exists',
+      'Write a basic SELECT statement to retrieve data',
+      'Understand the concept of tables, rows, and columns',
+      'Create and assign variables in Python',
+      'Use print() to display output',
+    ],
+  },
+  {
+    week: 2,
+    phase: 1,
+    title: 'Getting Specific',
+    subtitle: 'WHERE, AND, OR — filtering the noise',
+    sqlTopic: 'WHERE, AND, OR, NOT, comparison operators, NULL basics',
+    pythonTopic: 'if/elif/else, comparison operators, boolean logic',
+    analogy: 'SQL\'s WHERE clause and Python\'s if statement solve the exact same problem: "only show me rows that match a condition." In SQL you filter table rows; in Python you filter code execution. Same idea, different syntax.',
+    realWorldContext: 'Your manager needs a report: show all orders where item = "Orange Chicken" AND quantity > 2. In SQL that\'s one line. What does the equivalent logic look like in Python?',
+    miniProject: {
+      name: 'Menu Filter',
+      briefing: 'Your manager just Slack\'d you: "Hey, I need a quick filter on today\'s orders — show me everything where we sold more than 3 units of any entree, but only completed orders. Need it before the 3pm rush." You have both a SQL database AND a Python script to maintain. Both need the same filter logic.',
+      requirements: [
+        'Write a SQL query that filters orders by quantity > 3 AND category = \'Entrees\' AND status = \'complete\'',
+        'Write Python code using if statements that applies the same filtering logic to a list of order dictionaries',
+        'Both solutions must return the same set of results',
+        'Explain in 2-3 sentences why the same logic works differently in SQL vs Python',
+      ],
+      testCases: [
+        { id: 'sql_filter', description: 'SQL returns only completed entree orders with qty > 3', type: 'sql' },
+        { id: 'python_filter', description: 'Python logic correctly filters the same conditions', type: 'python' },
+        { id: 'results_match', description: 'Both solutions agree on number of matching records', type: 'both' },
+      ],
+      successCriteria: 'Both solutions produce matching results and student can explain WHY they use the same logical structure',
+    },
+    phaseGate: false,
+    dataset: 'week2_orders.db',
+    learningObjectives: [
+      'Filter query results using WHERE with multiple conditions',
+      'Understand how NULL values behave in comparisons',
+      'Write if/elif/else statements in Python',
+      'See the parallel structure between SQL WHERE and Python if',
+    ],
+  },
+  {
+    week: 3,
+    phase: 1,
+    title: 'Doing Math on Data',
+    subtitle: 'COUNT, SUM, GROUP BY — the analytics core',
+    sqlTopic: 'COUNT, SUM, AVG, MIN, MAX, GROUP BY, HAVING',
+    pythonTopic: 'for loops, lists, basic math, list comprehensions',
+    analogy: 'GROUP BY in SQL is like sorting receipts into piles by category and then adding up each pile. Python\'s for loop with a dictionary does the exact same thing, just manually. SQL just automates the pile-sorting.',
+    realWorldContext: 'End of shift. Your GM wants to know: which hour of the day brought in the most revenue today? Which category sold the most units? You\'re the one who has to pull this data.',
+    miniProject: {
+      name: 'Daily Sales Report',
+      briefing: 'Every Monday morning, your operations manager gets a sales summary. You\'ve been asked to build it. Given raw transaction data, produce a summary showing: total revenue by category, revenue by hour of day, and which location had the highest average order value.',
+      requirements: [
+        'SQL query: total revenue and order count grouped by category',
+        'SQL query: revenue by hour of day, ordered by hour',
+        'Python: reproduce the category aggregation using a dictionary and for loop',
+        'Python: find the location with highest average order value',
+        'Written explanation of how GROUP BY and your Python dictionary approach are solving the same problem',
+      ],
+      testCases: [
+        { id: 'sql_agg', description: 'SQL aggregation produces correct totals', type: 'sql' },
+        { id: 'python_loop', description: 'Python loop produces matching category totals', type: 'python' },
+        { id: 'hour_analysis', description: 'Hour-of-day analysis identifies correct peak hour', type: 'sql' },
+        { id: 'avg_order_val', description: 'Location comparison calculates avg order value correctly', type: 'both' },
+      ],
+      successCriteria: 'Student produces a coherent summary and can explain why GROUP BY is more efficient than a Python loop for this task',
+    },
+    phaseGate: false,
+    dataset: 'week3_sales.db',
+    learningObjectives: [
+      'Use aggregate functions: COUNT, SUM, AVG, MIN, MAX',
+      'Group results with GROUP BY',
+      'Filter groups with HAVING (vs WHERE)',
+      'Write for loops and list comprehensions in Python',
+      'Use dictionaries to aggregate data in Python',
+    ],
+  },
+  {
+    week: 4,
+    phase: 1,
+    title: 'Connecting the Dots',
+    subtitle: 'JOINs, foreign keys, and relational thinking',
+    sqlTopic: 'INNER JOIN, LEFT JOIN, RIGHT JOIN, FULL JOIN, foreign keys',
+    pythonTopic: 'Dictionaries, nested data structures, functions (def)',
+    analogy: 'A JOIN is like matching a customer\'s loyalty card to their order history. The loyalty card database and the orders database are separate tables — JOIN is the bridge. In Python, this is like looking up a key in a dictionary.',
+    realWorldContext: 'You want to find which of your regular customers haven\'t placed an order in the last 30 days. That requires matching the customer table to the orders table — and keeping the customers who have NO match. That\'s a LEFT JOIN.',
+    miniProject: {
+      name: 'Customer Loyalty Finder',
+      briefing: 'Marketing wants a list: show us our customers, their total spend, and flag anyone who hasn\'t ordered in 30+ days. Also show any customers who\'ve NEVER ordered — these are people in our system with no purchase history.',
+      requirements: [
+        'INNER JOIN to show customers who have orders, with total spend',
+        'LEFT JOIN to show ALL customers including those with no orders',
+        'Python: replicate the join logic using nested dictionaries',
+        'Identify the "never ordered" customers in both SQL and Python',
+        'Explain in your own words: when would you use LEFT JOIN vs INNER JOIN?',
+      ],
+      testCases: [
+        { id: 'inner_join', description: 'INNER JOIN returns only matched customers', type: 'sql' },
+        { id: 'left_join', description: 'LEFT JOIN includes all customers, NULLs where no order', type: 'sql' },
+        { id: 'python_join', description: 'Python dictionary logic replicates inner join behavior', type: 'python' },
+        { id: 'never_ordered', description: 'Both SQL and Python identify same never-ordered customers', type: 'both' },
+        { id: 'total_spend', description: 'Total spend calculation is correct', type: 'both' },
+      ],
+      successCriteria: 'Student can correctly identify when to use each JOIN type and explain why with a real-world analogy',
+    },
+    phaseGate: false,
+    dataset: 'week4_customers.db',
+    learningObjectives: [
+      'Write INNER JOIN to combine matching rows from two tables',
+      'Write LEFT JOIN to include all rows from the left table',
+      'Understand primary keys and foreign keys',
+      'Write Python functions with parameters and return values',
+      'Use nested dictionaries to represent relational data',
+    ],
+  },
+  {
+    week: 5,
+    phase: 2,
+    title: 'Real Data is Messy',
+    subtitle: 'NULL handling, CASE, COALESCE, and pandas basics',
+    sqlTopic: 'CASE statements, COALESCE, NULLIF, string functions, data type handling',
+    pythonTopic: 'pandas intro, DataFrames, reading CSV, handling NaN, .fillna(), .dropna()',
+    analogy: 'Every database I\'ve ever touched in the real world has garbage in it. Missing values, inconsistent formatting, the same thing spelled three different ways. Your job as a data analyst isn\'t just querying — it\'s cleaning.',
+    realWorldContext: 'The inventory database got imported from a legacy system. NULL values everywhere, quantities stored as strings like "150 units", dates in three different formats. You need to clean it before you can analyze it.',
+    miniProject: {
+      name: 'Data Janitor',
+      briefing: 'The operations team just migrated their inventory tracking from spreadsheets to the database. It\'s a mess. Missing quantities, inconsistent category names, some prices stored as "$6.99" (with the dollar sign), duplicate rows. Before anyone can use this data, you need to clean it. Document every decision you make.',
+      requirements: [
+        'SQL: use COALESCE to replace NULLs with sensible defaults',
+        'SQL: use CASE to standardize category names (all caps, all lower, mixed — pick one)',
+        'pandas: read the data, identify all NaN columns, handle each appropriately',
+        'pandas: remove duplicates using drop_duplicates()',
+        'Written: for each cleaning decision, explain WHY you made that choice (not just what you did)',
+      ],
+      testCases: [
+        { id: 'null_handling', description: 'No NULL values in critical columns after cleaning', type: 'both' },
+        { id: 'category_standardized', description: 'All category values use consistent casing', type: 'both' },
+        { id: 'no_duplicates', description: 'No duplicate rows in cleaned dataset', type: 'both' },
+        { id: 'documented', description: 'Explanation covers at least 3 specific cleaning decisions', type: 'both' },
+      ],
+      successCriteria: 'Student makes defensible cleaning decisions and documents the business reasoning behind each one',
+    },
+    phaseGate: false,
+    dataset: 'week5_messy.db',
+    learningObjectives: [
+      'Use CASE for conditional logic in SQL',
+      'Handle NULL values with COALESCE and IS NULL/IS NOT NULL',
+      'Create and manipulate pandas DataFrames',
+      'Handle missing values (NaN) in pandas',
+      'Read CSV and database data into pandas',
+    ],
+  },
+  {
+    week: 6,
+    phase: 2,
+    title: 'Slicing and Dicing',
+    subtitle: 'Subqueries, CTEs, window functions, and pandas groupby',
+    sqlTopic: 'Subqueries, CTEs (WITH), window functions (ROW_NUMBER, RANK, LAG)',
+    pythonTopic: 'pandas: loc/iloc, boolean indexing, groupby, agg, apply',
+    analogy: 'A window function is like a moving spotlight on a stage — it can look at any subset of rows while still seeing the full cast. It lets you compare "how does this row compare to others in its group?" without collapsing the data.',
+    realWorldContext: 'HR wants a performance dashboard: for each department, rank employees by their review score. Show each person\'s score AND where they rank within their department. That\'s a window function.',
+    miniProject: {
+      name: 'Performance Rankings',
+      briefing: 'Q4 reviews just dropped. The People team needs a ranking report: who are the top performers in each department? Show everyone\'s score AND their rank within their department. Then identify the top 3 employees company-wide. They want it in both a database query format AND a Python report they can run locally.',
+      requirements: [
+        'SQL: use ROW_NUMBER() OVER (PARTITION BY department ORDER BY score DESC) to rank within department',
+        'SQL: use a CTE to first calculate rankings, then filter to top 3 per department',
+        'pandas: replicate the ranking using groupby and rank()',
+        'pandas: use loc/iloc to slice specific rows and columns',
+        'Find the top 3 overall performers using both SQL and Python',
+      ],
+      testCases: [
+        { id: 'rank_per_dept', description: 'Each employee has a rank within their department (1 = highest score)', type: 'sql' },
+        { id: 'top3_per_dept', description: 'Top 3 per department correctly identified', type: 'sql' },
+        { id: 'pandas_rank', description: 'pandas rank() produces same ordering as SQL window function', type: 'python' },
+        { id: 'results_agree', description: 'SQL and Python agree on the top 3 performers', type: 'both' },
+      ],
+      successCriteria: 'Student understands why window functions exist and can articulate the difference between RANK and ROW_NUMBER',
+    },
+    phaseGate: false,
+    dataset: 'week6_employees.db',
+    learningObjectives: [
+      'Write subqueries in SELECT, FROM, and WHERE clauses',
+      'Use CTEs for readable multi-step queries',
+      'Apply window functions: ROW_NUMBER, RANK, LAG, LEAD',
+      'Use pandas groupby with aggregation functions',
+      'Filter DataFrames with boolean indexing and loc/iloc',
+    ],
+  },
+  {
+    week: 7,
+    phase: 2,
+    title: 'Time is a Dimension',
+    subtitle: 'Date functions, time series, and trend analysis',
+    sqlTopic: 'DATE functions, STRFTIME, time-based GROUP BY, rolling windows, YoY comparisons',
+    pythonTopic: 'datetime library, pandas time series, resample(), rolling(), dt accessor',
+    analogy: 'Time series data is like reading a store\'s daily receipts in order. You\'re not just asking "how much total?" — you\'re asking "how is the trend moving?" That requires understanding date arithmetic.',
+    realWorldContext: 'Your GM asks: "Are we doing better than this time last year? Flag any week where sales dropped more than 15% compared to the week before." That\'s a time series analysis problem.',
+    miniProject: {
+      name: 'Trend Detector',
+      briefing: 'The regional VP is asking for a 2-year revenue trend report with anomaly flags. They want to see: monthly revenue trend, week-over-week change percentage, and any weeks where revenue dropped more than 15%. Make it visual — they want a chart, not just numbers.',
+      requirements: [
+        'SQL: group by month to get monthly totals, calculate month-over-month change with LAG()',
+        'SQL: flag anomalous weeks (>15% drop) using CASE with LAG()',
+        'pandas: resample time series data by month and week',
+        'pandas: calculate rolling 4-week average',
+        'Recharts: produce a line chart showing the trend with anomaly markers',
+      ],
+      testCases: [
+        { id: 'monthly_totals', description: 'Monthly aggregation is correct', type: 'sql' },
+        { id: 'mom_change', description: 'Month-over-month % change calculated correctly', type: 'sql' },
+        { id: 'anomaly_flags', description: 'Correctly identifies weeks with >15% drops', type: 'both' },
+        { id: 'rolling_avg', description: 'Rolling average smooths the trend correctly', type: 'python' },
+        { id: 'chart_rendered', description: 'Chart displays with correct data', type: 'python' },
+      ],
+      successCriteria: 'Student produces an analysis that would be useful to a real operations manager making decisions',
+    },
+    phaseGate: false,
+    dataset: 'week7_timeseries.db',
+    learningObjectives: [
+      'Use SQL date functions: STRFTIME, DATE, JULIANDAY',
+      'Group by time period (day, week, month)',
+      'Compare current vs previous periods using LAG()',
+      'Work with Python datetime objects',
+      'Use pandas resample() and rolling() for time series',
+    ],
+  },
+  {
+    week: 8,
+    phase: 2,
+    title: 'Thinking in Sets',
+    subtitle: 'UNION, INTERSECT, EXCEPT — set theory for analysts',
+    sqlTopic: 'UNION, UNION ALL, INTERSECT, EXCEPT, advanced self-joins',
+    pythonTopic: 'Python set operations, DataFrame merge types, concat, pivot_table',
+    analogy: 'Set operations are Venn diagrams made executable. UNION = everything in circle A or B. INTERSECT = only what\'s in BOTH circles. EXCEPT = only what\'s in A but NOT in B. Draw it out before you write it.',
+    realWorldContext: 'Which products are in BOTH the top 10 for the East region AND the top 10 for the West? Which products are top sellers in the East but nowhere in the West? That\'s INTERSECT and EXCEPT.',
+    miniProject: {
+      name: 'Regional Overlap Analysis',
+      briefing: 'The product team needs a regional performance matrix. They want to know: which products are universally popular (appear in top 10 across all three regions)? Which are regional favorites (top in one region but not others)? Which products are underperforming everywhere? This is the first project that REQUIRES both SQL and Python working on the same question.',
+      requirements: [
+        'SQL INTERSECT: find products in top 10 in all three regions',
+        'SQL EXCEPT: find products popular in East but NOT in West',
+        'SQL UNION: combine all regional top-10 lists into one',
+        'pandas: replicate using set operations on Python sets and/or DataFrame merge',
+        'pandas pivot_table: build a matrix showing each product\'s rank by region',
+        'Both SQL and Python must agree on the "universally popular" product list',
+      ],
+      testCases: [
+        { id: 'intersect', description: 'INTERSECT correctly finds products in all regional top 10s', type: 'sql' },
+        { id: 'except', description: 'EXCEPT correctly identifies East-only top products', type: 'sql' },
+        { id: 'python_sets', description: 'Python set operations produce same results as SQL set ops', type: 'python' },
+        { id: 'pivot', description: 'Pivot table shows rank by region for each product', type: 'python' },
+        { id: 'agreement', description: 'SQL and Python agree on all categories', type: 'both' },
+      ],
+      successCriteria: 'Student can draw the Venn diagram for each set operation before writing the code',
+    },
+    phaseGate: true,  // PHASE 2 GATE
+    dataset: 'week8_regional.db',
+    learningObjectives: [
+      'Use UNION, UNION ALL for combining result sets',
+      'Use INTERSECT to find rows in both result sets',
+      'Use EXCEPT to find rows in one but not another',
+      'Apply Python set operations (union, intersection, difference)',
+      'Use pandas pivot_table for multi-dimensional analysis',
+    ],
+  },
+  {
+    week: 9,
+    phase: 3,
+    title: 'The Full Analyst Workflow',
+    subtitle: 'SQL + Python together: extract → transform → visualize',
+    sqlTopic: 'Full database queries, views, integration patterns',
+    pythonTopic: 'pandas full pipeline, matplotlib/recharts, data pipeline design',
+    analogy: 'This week is like cooking a full meal instead of just individual ingredients. SQL is the prep cook — it does the heavy work of pulling and organizing. Python is the chef — it transforms and plates the final dish.',
+    realWorldContext: 'Your manager wants a weekly ops dashboard: 3 charts showing key metrics. You need to pull from a real database, transform the data, and produce visualizations a VP could present in a meeting.',
+    miniProject: {
+      name: 'Executive Dashboard',
+      briefing: 'Friday 4pm, you get this Slack: "Hey, I need 3 charts for the Monday board meeting. Revenue trend by location (last 90 days), top 5 products by total revenue this quarter, and customer growth over time. Clean, professional, presentation-ready." This is real work.',
+      requirements: [
+        'Write SQL queries to pull the three required datasets',
+        'Use pandas to transform and clean each dataset',
+        'Build 3 charts using the app\'s visualization system (Recharts)',
+        'Each chart must have a clear title, labeled axes, and correct data',
+        'Write a 3-sentence executive summary interpreting what the charts show',
+      ],
+      testCases: [
+        { id: 'revenue_trend', description: 'Revenue trend chart shows correct 90-day data by location', type: 'both' },
+        { id: 'top_products', description: 'Top 5 products correctly ranked by total revenue', type: 'both' },
+        { id: 'customer_growth', description: 'Customer growth chart shows correct monthly new customers', type: 'both' },
+        { id: 'charts_render', description: 'All 3 charts render correctly in the app', type: 'python' },
+        { id: 'executive_summary', description: 'Written summary accurately interprets the data', type: 'both' },
+      ],
+      successCriteria: 'Deliverable looks like something that could actually be shown to a VP — not a homework assignment',
+    },
+    phaseGate: false,
+    dataset: 'week9_company_ops.db',
+    learningObjectives: [
+      'Design a full data pipeline from SQL to visualization',
+      'Combine SQL results with pandas transformations',
+      'Choose the right chart type for each type of data',
+      'Write clear, accurate data narratives',
+      'Build production-quality visualizations',
+    ],
+  },
+  {
+    week: 10,
+    phase: 3,
+    title: 'Automation is the Goal',
+    subtitle: 'Scripts, schedules, and self-running reports',
+    sqlTopic: 'Database views, query templating, SQL patterns for reporting',
+    pythonTopic: 'Functions, modules, file I/O, f-strings, error handling, script design',
+    analogy: 'The goal of a good analyst isn\'t to run the same report 52 times a year. It\'s to build the report ONCE and automate the other 51. Python makes that possible.',
+    realWorldContext: 'You\'ve been running the Monday morning sales report manually. Your manager sees you do it and says "Why are you doing that by hand? Can\'t that just... run itself?" Yes. Yes it can.',
+    miniProject: {
+      name: 'The Self-Running Report',
+      briefing: 'You\'ve built great reports manually. Now make them automatic. Write a Python script that: connects to the database, runs the relevant queries, formats the results, and saves a clean CSV report — all without human input. It should run to completion and produce the file, or fail with a clear error message.',
+      requirements: [
+        'Python script that connects to SQLite using sqlite3 module',
+        'Modular design: separate functions for each query',
+        'Generates a formatted CSV report using pandas',
+        'Handles errors gracefully (missing DB, bad query) with informative messages',
+        'Includes a run log: prints what it did and how long each step took',
+      ],
+      testCases: [
+        { id: 'script_runs', description: 'Script executes without errors', type: 'python' },
+        { id: 'csv_generated', description: 'CSV report is generated with correct structure', type: 'python' },
+        { id: 'modular', description: 'Functions are properly separated by responsibility', type: 'python' },
+        { id: 'error_handling', description: 'Script fails gracefully with informative error if DB missing', type: 'python' },
+        { id: 'timing', description: 'Script prints execution time for each step', type: 'python' },
+      ],
+      successCriteria: 'Script runs end-to-end without manual intervention and another person could understand what it does from the code alone',
+    },
+    phaseGate: false,
+    dataset: 'week10_reporting.db',
+    learningObjectives: [
+      'Write modular Python scripts with reusable functions',
+      'Use sqlite3 module to query databases from Python',
+      'Handle file I/O: read and write CSV files',
+      'Implement basic error handling with try/except',
+      'Design scripts that are readable by others',
+    ],
+  },
+  {
+    week: 11,
+    phase: 3,
+    title: 'Scale and Performance',
+    subtitle: 'EXPLAIN plans, indexing, vectorization, and profiling',
+    sqlTopic: 'EXPLAIN QUERY PLAN, index strategy, query optimization, avoiding full table scans',
+    pythonTopic: 'timeit profiling, vectorization vs loops, memory-efficient operations',
+    analogy: 'A query that takes 2ms on 10,000 rows takes 2 HOURS on 10 billion rows — if you\'re doing it wrong. Performance isn\'t advanced knowledge. It\'s the difference between a query that runs and one that takes down a production server.',
+    realWorldContext: 'You\'ve been asked to optimize a dashboard that runs fine on dev but times out on prod. Same query, 1,000x more data. What do you do first?',
+    miniProject: {
+      name: 'The Slow Query Clinic',
+      briefing: 'You\'ve been handed 5 "broken" queries — they work, but they\'re unacceptably slow. Your job: diagnose WHY each one is slow using EXPLAIN QUERY PLAN, fix it, explain what you did and why it works. Same for 2 Python functions that use loops where they shouldn\'t.',
+      requirements: [
+        'Run EXPLAIN QUERY PLAN on each of the 5 provided SQL queries',
+        'Identify the specific performance problem in each (full scan, missing index, etc.)',
+        'Fix each query and verify with EXPLAIN that it now uses an index',
+        'Profile the 2 Python functions using timeit and measure before/after',
+        'Write a 1-sentence explanation of WHY your fix works for each problem',
+      ],
+      testCases: [
+        { id: 'explain_output', description: 'Student can read and interpret EXPLAIN QUERY PLAN output', type: 'sql' },
+        { id: 'index_created', description: 'Appropriate indexes created for slow queries', type: 'sql' },
+        { id: 'query_faster', description: 'Fixed queries no longer show SCAN TABLE in EXPLAIN', type: 'sql' },
+        { id: 'python_profiled', description: 'Python functions profiled with timeit', type: 'python' },
+        { id: 'vectorized', description: 'Loop-based code replaced with vectorized equivalent', type: 'python' },
+      ],
+      successCriteria: 'Student can look at any slow query and immediately form a hypothesis about why it\'s slow',
+    },
+    phaseGate: false,
+    dataset: 'week11_large.db',
+    learningObjectives: [
+      'Read and interpret EXPLAIN QUERY PLAN output',
+      'Create indexes on appropriate columns',
+      'Identify anti-patterns: SELECT *, missing indexes, N+1 queries',
+      'Profile Python code with timeit',
+      'Replace loops with vectorized pandas operations',
+    ],
+  },
+  {
+    week: 12,
+    phase: 3,
+    title: 'Thinking Like a Senior',
+    subtitle: 'Code review, refactoring, and design decisions',
+    sqlTopic: 'Query design decisions, when NOT to use SQL, readability over cleverness',
+    pythonTopic: 'Code review mindset, refactoring, naming conventions, documentation',
+    analogy: 'Writing code that works is the baseline. Writing code that the next person can READ is the skill. Senior engineers spend as much time thinking about the person reading their code as the machine running it.',
+    realWorldContext: 'You\'ve been given three "colleague scripts" — they work, but they\'re hard to maintain. Your job is to read them, find the problems (bugs AND bad practices), and fix them.',
+    miniProject: {
+      name: 'The Code Review',
+      briefing: 'Three scripts just landed in your inbox. They were written by a well-intentioned junior analyst who left the company last month. The scripts work — most of the time. But they\'re hard to read, contain subtle bugs, and would be impossible to maintain. Your job: find the issues, fix them, and explain your reasoning for every change.',
+      requirements: [
+        'Review all three provided scripts and list every issue found (bugs AND style problems)',
+        'Fix the actual bugs (there are 2-3 per script)',
+        'Refactor for readability: better variable names, extracted functions, comments',
+        'For each major change: write a comment explaining WHY you made it',
+        'Don\'t change what the code does — only how it\'s written (except for bugs)',
+      ],
+      testCases: [
+        { id: 'bugs_found', description: 'All bugs identified and fixed', type: 'both' },
+        { id: 'readable', description: 'Refactored code is meaningfully more readable', type: 'both' },
+        { id: 'explained', description: 'Each major change has a comment explaining the why', type: 'both' },
+        { id: 'tests_pass', description: 'Fixed scripts produce correct output', type: 'both' },
+        { id: 'no_regressions', description: 'No functionality was accidentally broken', type: 'both' },
+      ],
+      successCriteria: 'Student finds issues that require understanding business context, not just syntax errors',
+    },
+    phaseGate: true,  // PHASE 3 GATE
+    dataset: 'week12_messy_code.db',
+    learningObjectives: [
+      'Read and understand unfamiliar code',
+      'Identify common anti-patterns and bugs',
+      'Refactor code for readability without changing behavior',
+      'Understand the difference between "working" and "good"',
+      'Write self-documenting code',
+    ],
+  },
+  {
+    week: 13,
+    phase: 4,
+    title: 'Retail Analytics Engine',
+    subtitle: 'Capstone 1: dimensional modeling meets Python pipelines',
+    sqlTopic: 'Dimensional modeling, fact/dimension tables, Kimball concepts, complex JOINs',
+    pythonTopic: 'Full ETL pipeline, pandas complex transforms, automated reporting',
+    analogy: 'Everything you\'ve learned clicks into place here. You\'re not doing exercises anymore — you\'re building a real analytics system.',
+    realWorldContext: 'You\'ve been brought in as the data analyst for a retail chain. They have raw transaction data, employee records, and product catalogs — but no analytics layer. Build it.',
+    miniProject: {
+      name: 'Retail Analytics Engine',
+      briefing: 'The retail chain has raw data in their operational database. They need: a dimensional model (star schema) for reporting, a Python ETL that loads and transforms data, and a summary report for the executive team. This is a real deliverable.',
+      requirements: [
+        'Design a star schema with at least 1 fact table and 3 dimension tables',
+        'Write the CREATE TABLE statements and populate them from the raw data',
+        'Build a Python ETL class that reads source, transforms, and loads to the star schema',
+        'Write 5 business-critical queries against the dimensional model',
+        'Produce an executive summary chart set (minimum 3 charts)',
+      ],
+      testCases: [],
+      successCriteria: 'The system could be handed to a real analyst and used to answer business questions',
+    },
+    phaseGate: false,
+    dataset: 'week13_retail.db',
+    learningObjectives: [
+      'Understand dimensional modeling (star/snowflake schema)',
+      'Design fact and dimension tables',
+      'Build a complete ETL pipeline in Python',
+      'Write complex multi-table analytical queries',
+      'Connect all Phase 1-3 skills in one integrated system',
+    ],
+  },
+  {
+    week: 14,
+    phase: 4,
+    title: 'Operations Intelligence Dashboard',
+    subtitle: 'Capstone 2: transit operations meets real-world analytics',
+    sqlTopic: 'Operations data modeling, time-based analysis, KPI queries',
+    pythonTopic: 'Operations analytics, pandas time series, automated alerting patterns',
+    analogy: 'This is your territory — you\'ve actually worked in operations. Now apply data skills to a domain you understand intuitively.',
+    realWorldContext: 'The SunTran bus system wants an operations intelligence dashboard. On-time performance, ridership trends, route efficiency. This connects directly to your capstone work.',
+    miniProject: {
+      name: 'Operations Intelligence Dashboard',
+      briefing: 'The transit authority needs to answer: Which routes are consistently late? What\'s ridership trend week over week? Which stops have the highest boarding volume? Build a complete dashboard that answers these questions automatically from the database.',
+      requirements: [
+        'Define "on-time" in SQL (scheduled vs actual departure within 5 minutes)',
+        'Calculate on-time performance percentage by route for last 30 days',
+        'Ridership trend: week-over-week change by route',
+        'Python: build a performance alert function that flags routes below 80% on-time',
+        'Dashboard: minimum 3 charts, 1 data table with KPIs',
+      ],
+      testCases: [],
+      successCriteria: 'Dashboard answers real operational questions that a transit manager would actually ask',
+    },
+    phaseGate: false,
+    dataset: 'week14_transit.db',
+    learningObjectives: [
+      'Apply SQL/Python to a domain you understand (operations)',
+      'Define and calculate operational KPIs',
+      'Build automated performance monitoring',
+      'Connect personal domain knowledge to technical skills',
+      'Design dashboards for non-technical audiences',
+    ],
+  },
+  {
+    week: 15,
+    phase: 4,
+    title: 'Anomaly Detection System',
+    subtitle: 'Capstone 3: find what doesn\'t belong',
+    sqlTopic: 'Statistical functions in SQL, anomaly flagging patterns, alert queries',
+    pythonTopic: 'Statistical analysis, z-scores, IQR method, automated email/alert patterns',
+    analogy: 'Anomaly detection is like a security guard who knows the building well enough to notice when something\'s off. Normal looks a certain way; your job is to define "normal" mathematically so a computer can do the noticing.',
+    realWorldContext: 'Someone is committing transaction fraud in the system. The fraud doesn\'t show up in any single transaction — it only becomes visible as a pattern. Can you detect it?',
+    miniProject: {
+      name: 'Anomaly Detection System',
+      briefing: 'The operations team has hidden 10 anomalies in the dataset — sudden spikes, impossible values, suspicious patterns. Your system must find them automatically. Define "normal" behavior, flag deviations, and produce an alert report.',
+      requirements: [
+        'SQL: calculate statistical baseline (mean, std dev) per category/location',
+        'SQL: flag any row more than 2 standard deviations from the baseline',
+        'Python: implement IQR method for outlier detection',
+        'Python: compare SQL-detected anomalies to Python-detected anomalies',
+        'Build an alert system: produce a formatted report of all anomalies with severity',
+      ],
+      testCases: [],
+      successCriteria: 'System detects at least 8 of the 10 hidden anomalies without flagging more than 5% false positives',
+    },
+    phaseGate: false,
+    dataset: 'week15_anomaly.db',
+    learningObjectives: [
+      'Calculate statistical measures in SQL (mean, stddev approximation)',
+      'Implement z-score and IQR anomaly detection',
+      'Build automated monitoring and alerting patterns',
+      'Balance sensitivity vs specificity in anomaly detection',
+      'Communicate anomaly findings clearly',
+    ],
+  },
+  {
+    week: 16,
+    phase: 4,
+    title: 'Portfolio Defense',
+    subtitle: 'Your capstone — defend every decision',
+    sqlTopic: 'Review all phases',
+    pythonTopic: 'Review all phases',
+    analogy: 'The final week isn\'t a test. It\'s a conversation between two engineers — one of whom happens to know everything you learned this semester.',
+    realWorldContext: 'A senior engineer is reviewing your work before it gets deployed to production. They\'re going to ask hard questions. Every decision needs a reason.',
+    miniProject: {
+      name: 'Portfolio Defense',
+      briefing: 'Present all four capstone projects. For each one: what problem were you solving? What were the key technical decisions? What would you do differently if you had more time? Sage will ask three probing questions about each project. You need to defend your choices, not just describe what you did.',
+      requirements: [
+        'Prepare a 2-minute summary of each capstone project',
+        'Be ready to explain any SQL query or Python function you wrote',
+        'Identify the hardest technical decision you made in each project',
+        'Describe one thing you\'d improve with a week more time',
+        'Answer Sage\'s questions without looking up your code',
+      ],
+      testCases: [],
+      successCriteria: 'You can explain every decision you made in plain English to someone who doesn\'t know the domain',
+    },
+    phaseGate: false,
+    dataset: 'week16_portfolio.db',
+    learningObjectives: [
+      'Articulate technical decisions in plain English',
+      'Understand the WHY behind every choice you made',
+      'Identify your own weak areas and have a growth plan',
+      'Think like someone reviewing your own code',
+      'Connect the semester arc: what can you do now that you couldn\'t 16 weeks ago?',
+    ],
+  },
+]
+
+export function getWeekByNumber(week: number): WeekDefinition | undefined {
+  return WEEKS.find(w => w.week === week)
+}
+
+export function getPhaseWeeks(phase: 1 | 2 | 3 | 4): WeekDefinition[] {
+  return WEEKS.filter(w => w.phase === phase)
+}
+
+export const PHASE_NAMES = {
+  1: 'Foundations',
+  2: 'Intermediate Craft',
+  3: 'Integration',
+  4: 'Senior Thinking',
+}
+
+export const PHASE_RANGES = {
+  1: [1, 4],
+  2: [5, 8],
+  3: [9, 12],
+  4: [13, 16],
+}

@@ -1,0 +1,230 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: #0D1117;
+    color: #E6EDF3;
+    font-family: 'Source Serif 4', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #161B22;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #30363D;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #484F58;
+  }
+}
+
+@layer components {
+  /* Grid texture overlay */
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Scanline effect for terminal areas */
+  .scanline::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(transparent, rgba(0, 212, 255, 0.1), transparent);
+    animation: scanline 8s linear infinite;
+    pointer-events: none;
+  }
+
+  /* Glow effects */
+  .glow-sql {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.15), 0 0 40px rgba(0, 212, 255, 0.05);
+  }
+
+  .glow-python {
+    box-shadow: 0 0 20px rgba(255, 179, 71, 0.15), 0 0 40px rgba(255, 179, 71, 0.05);
+  }
+
+  .glow-success {
+    box-shadow: 0 0 20px rgba(57, 211, 83, 0.2), 0 0 40px rgba(57, 211, 83, 0.1);
+  }
+
+  /* Text glow */
+  .text-glow-sql {
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+  }
+
+  .text-glow-python {
+    text-shadow: 0 0 10px rgba(255, 179, 71, 0.5);
+  }
+
+  /* Panel borders */
+  .panel {
+    @apply bg-bg-secondary border border-border-default rounded-lg;
+  }
+
+  .panel-sql {
+    @apply panel border-accent-sql/20;
+  }
+
+  .panel-python {
+    @apply panel border-accent-python/20;
+  }
+
+  /* Buttons */
+  .btn {
+    @apply px-4 py-2 rounded-md font-display font-medium text-sm transition-all duration-200 cursor-pointer select-none;
+  }
+
+  .btn-sql {
+    @apply btn bg-accent-sql/10 text-accent-sql border border-accent-sql/30 hover:bg-accent-sql/20 hover:border-accent-sql/50;
+  }
+
+  .btn-python {
+    @apply btn bg-accent-python/10 text-accent-python border border-accent-python/30 hover:bg-accent-python/20 hover:border-accent-python/50;
+  }
+
+  .btn-success {
+    @apply btn bg-accent-success/10 text-accent-success border border-accent-success/30 hover:bg-accent-success/20 hover:border-accent-success/50;
+  }
+
+  .btn-ghost {
+    @apply btn text-accent-muted border border-border-default hover:bg-bg-tertiary hover:text-white;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent-sql text-bg-primary hover:bg-accent-sql/90 font-semibold;
+  }
+
+  /* XP bar */
+  .xp-bar {
+    @apply h-2 rounded-full bg-bg-tertiary overflow-hidden;
+  }
+
+  .xp-bar-fill {
+    @apply h-full rounded-full transition-all duration-700 ease-out;
+    background: linear-gradient(90deg, #00D4FF, #0099CC);
+  }
+
+  /* Code blocks in lesson reader */
+  .lesson-code {
+    @apply font-mono text-sm bg-bg-primary border border-border-default rounded-md p-4 my-3 overflow-x-auto;
+    @apply hover:border-accent-sql/40 cursor-pointer transition-colors;
+  }
+
+  /* Typewriter cursor */
+  .typewriter-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: #00D4FF;
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes blink {
+    50% { opacity: 0; }
+  }
+
+  /* Particle burst */
+  .particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: particle-fly 0.6s ease-out forwards;
+  }
+
+  @keyframes particle-fly {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+  }
+
+  /* Phase lock overlay */
+  .phase-lock {
+    @apply absolute inset-0 flex flex-col items-center justify-center z-10 rounded-lg;
+    background: rgba(13, 17, 23, 0.92);
+    backdrop-filter: blur(4px);
+  }
+
+  /* Level badge */
+  .level-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-display font-semibold;
+    background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,153,204,0.15));
+    border: 1px solid rgba(0,212,255,0.3);
+    color: #00D4FF;
+  }
+
+  /* Insight card */
+  .insight-card {
+    @apply panel border-accent-warning/30 p-4 cursor-pointer transition-all duration-200;
+    @apply hover:border-accent-warning/60 hover:bg-bg-tertiary;
+  }
+
+  /* Week navigation */
+  .week-dot {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-xs font-display font-bold transition-all duration-200 cursor-pointer;
+  }
+
+  .week-dot-current {
+    @apply week-dot bg-accent-sql text-bg-primary ring-2 ring-accent-sql ring-offset-2 ring-offset-bg-primary;
+  }
+
+  .week-dot-completed {
+    @apply week-dot bg-accent-success/20 text-accent-success border border-accent-success/40;
+  }
+
+  .week-dot-available {
+    @apply week-dot bg-bg-tertiary text-accent-muted border border-border-default hover:border-accent-sql/40 hover:text-white;
+  }
+
+  .week-dot-locked {
+    @apply week-dot bg-bg-tertiary text-border-strong border border-border-subtle cursor-not-allowed;
+  }
+}
+
+/* Monaco editor dark theme override */
+.monaco-editor {
+  background-color: #0D1117 !important;
+}
+
+/* Framer Motion will handle most animations */
+
+/* Custom selection colors */
+::selection {
+  background: rgba(0, 212, 255, 0.25);
+  color: white;
+}

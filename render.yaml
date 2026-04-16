@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: sage-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server/index.cjs
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: PORT
+        value: 3001
+    plan: free

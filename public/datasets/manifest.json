@@ -1,0 +1,21 @@
+{
+  "datasets": {
+    "week1": "week1_*.db",
+    "week2": "week2_*.db",
+    "week3": "week3_*.db",
+    "week4": "week4_*.db",
+    "week5": "week5_*.db",
+    "week6": "week6_*.db",
+    "week7": "week7_*.db",
+    "week8": "week8_*.db",
+    "week9": "week9_*.db",
+    "week10": "week10_*.db",
+    "week11": "week11_*.db",
+    "week12": "week12_*.db",
+    "week13": "week13_*.db",
+    "week14": "week14_*.db",
+    "week15": "week15_*.db",
+    "week16": "week16_*.db"
+  },
+  "generated_at": "2026-04-16T02:31:19.548365"
+}

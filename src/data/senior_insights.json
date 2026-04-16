@@ -1,0 +1,102 @@
+[
+  {
+    "id": "cte-vs-subquery",
+    "title": "Why CTEs exist (and when NOT to use them)",
+    "week_unlock": 6,
+    "track": "sql",
+    "teaser": "CTEs look cleaner, but they're not always faster.",
+    "content": "A CTE (Common Table Expression, the WITH clause) was invented primarily for readability, not performance. In most databases, a CTE and an equivalent subquery produce the exact same execution plan. The real reason senior engineers prefer CTEs: you write the logic once, give it a name, and reference it multiple times — just like naming a variable. However, in some databases (older MySQL, certain PostgreSQL versions), CTEs are NOT optimized the same way and can actually be SLOWER because they materialize the intermediate result. Rule: use CTEs for readability and reusability, but if a query is running slow, try rewriting the CTE as a subquery and compare EXPLAIN output.",
+    "code_example": "-- This and the subquery version produce IDENTICAL results in SQLite\nWITH high_value_orders AS (\n  SELECT customer_id, SUM(total) as lifetime_value\n  FROM orders\n  GROUP BY customer_id\n  HAVING lifetime_value > 1000\n)\nSELECT c.name, h.lifetime_value\nFROM customers c\nINNER JOIN high_value_orders h ON c.id = h.customer_id;",
+    "senior_tip": "I always use CTEs in production code because six months later, someone else (or future-me) has to read it. Readability is a feature."
+  },
+  {
+    "id": "always-alias",
+    "title": "The real reason you should always alias your columns",
+    "week_unlock": 2,
+    "track": "sql",
+    "teaser": "SELECT * is fine for exploring. It's dangerous in production.",
+    "content": "When you write SELECT * FROM orders, you get every column in the current schema. But what happens when someone adds a 'password_hash' column six months later? Or rearranges column order? If you're feeding that query into an application, your code breaks silently. Senior engineers alias every column in production queries for three reasons: (1) explicit is safer than implicit, (2) aliases document intent — SELECT SUM(amount) AS total_revenue tells the reader what they're looking at, and (3) it forces you to think about exactly what data you actually need.",
+    "code_example": "-- Dangerous in production:\nSELECT * FROM orders WHERE status = 'complete';\n\n-- Senior-level:\nSELECT\n  o.id AS order_id,\n  o.customer_id,\n  o.total_amount AS revenue,\n  o.order_date\nFROM orders o\nWHERE o.status = 'complete';",
+    "senior_tip": "The five seconds it takes to alias your columns will save you hours of debugging when the schema changes."
+  },
+  {
+    "id": "pandas-vs-python",
+    "title": "When pandas is actually slower than pure Python",
+    "week_unlock": 9,
+    "track": "python",
+    "teaser": "The overhead of pandas isn't free.",
+    "content": "Pandas is optimized for large tabular data with C-backed vectorized operations. But it has real overhead: object creation, index management, memory allocation. For very small datasets (< 1,000 rows) or simple row-by-row operations, a plain Python list comprehension or dictionary is often 10-50x faster. The break-even point where pandas wins is roughly: (1) any aggregation over 10k+ rows, (2) any join operation on two tables, (3) any operation that would require a nested loop in pure Python. Below that threshold, the overhead of creating a DataFrame often costs more than the computation itself.",
+    "code_example": "import timeit\n\n# For 100 numbers — pure Python wins\ndata = list(range(100))\n\n# Pure Python: ~0.001ms\nresult = [x * 2 for x in data if x > 50]\n\n# Pandas: ~2ms (200x slower for tiny data!)\nimport pandas as pd\ns = pd.Series(data)\nresult = s[s > 50] * 2\n\n# For 1,000,000 numbers — pandas wins by a mile",
+    "senior_tip": "I use pandas when I'm working with tabular data that came from a database or CSV. I use plain Python lists/dicts for everything else."
+  },
+  {
+    "id": "dev-vs-prod",
+    "title": "Why your SQL query runs fast in dev and slow in prod",
+    "week_unlock": 11,
+    "track": "sql",
+    "teaser": "10k rows vs 10M rows is a different universe.",
+    "content": "Three things change between dev and prod that kill query performance: (1) Data volume — your dev database has 10,000 rows; prod has 50 million. A full table scan that takes 2ms in dev takes 10 minutes in prod. (2) Missing indexes — adding an index on customer_id drops a 10-second query to 5ms, but nobody added the index in prod. (3) Lock contention — in dev you're the only user; in prod, 500 concurrent queries are all trying to read and write simultaneously. Always test queries with realistic data volumes, always check EXPLAIN before deploying, and always add indexes on foreign keys and frequently-filtered columns.",
+    "code_example": "-- Always run EXPLAIN before deploying a query\nEXPLAIN QUERY PLAN\nSELECT c.name, COUNT(o.id) as order_count\nFROM customers c\nLEFT JOIN orders o ON c.id = o.customer_id\nWHERE o.order_date > '2024-01-01'\nGROUP BY c.id;\n-- If you see 'SCAN TABLE' without 'USING INDEX', add an index!",
+    "senior_tip": "I never push a query to production without running EXPLAIN on realistic data. Five minutes of analysis prevents five hours of incident response."
+  },
+  {
+    "id": "deadly-join",
+    "title": "The one JOIN mistake that takes down production databases",
+    "week_unlock": 4,
+    "track": "sql",
+    "teaser": "A missing WHERE clause on a JOIN created a 2.3 billion row result set.",
+    "content": "A Cartesian product (or cross join) happens when you JOIN two tables without a proper ON condition, or with a condition that doesn't actually filter. If table A has 50,000 rows and table B has 50,000 rows, a bad JOIN produces 2.5 billion rows. This query runs forever, consumes all database memory, and can crash the entire server — affecting every other user. Always verify your JOIN conditions before running against large tables. When in doubt, add a LIMIT 10 first and check that the result looks correct before removing the limit.",
+    "code_example": "-- DANGEROUS — accidental cross join (missing JOIN condition)\nSELECT * FROM orders o, customers c\nWHERE o.status = 'complete';\n-- ^ This returns orders.count * customers.count rows!\n\n-- CORRECT\nSELECT * FROM orders o\nINNER JOIN customers c ON c.id = o.customer_id\nWHERE o.status = 'complete';",
+    "senior_tip": "Before any new JOIN on a table I haven't worked with before, I run SELECT COUNT(*) FROM that_table first. Knowing the row count takes 2 seconds and prevents disasters."
+  },
+  {
+    "id": "sql-comments",
+    "title": "Why senior engineers write SQL comments like documentation",
+    "week_unlock": 7,
+    "track": "sql",
+    "teaser": "SQL without comments is a liability.",
+    "content": "SQL queries often encode business logic that isn't obvious from the code itself. What does 'status NOT IN (3,7,9)' mean six months later? Nobody knows without context. Senior engineers comment their SQL with: (1) WHY this filter exists (business rule, not just what it does), (2) what the expected result set represents in plain English, (3) any known edge cases or gotchas. This isn't about following rules — it's about the fact that SQL often becomes tribal knowledge embedded in a codebase, and undocumented business logic is a maintenance nightmare.",
+    "code_example": "-- Monthly Revenue Report — excludes test accounts and refunded orders\n-- Business rule: status 3 = test, 7 = refunded, 9 = fraud\n-- Note: order_date uses UTC; convert to local time in reporting layer\nSELECT\n  DATE_TRUNC('month', order_date) AS month,\n  SUM(total_amount) AS gross_revenue,\n  COUNT(DISTINCT customer_id) AS unique_customers\nFROM orders\nWHERE status NOT IN (3, 7, 9)  -- exclude test, refunded, fraud\n  AND order_date >= '2024-01-01'\nGROUP BY 1\nORDER BY 1;",
+    "senior_tip": "I write SQL comments for my future self at 11pm during an incident, trying to understand what this query was supposed to do."
+  },
+  {
+    "id": "vectorize-dont-loop",
+    "title": "Vectorization: the single biggest pandas speedup",
+    "week_unlock": 11,
+    "track": "python",
+    "teaser": "df.apply() with a loop is the #1 beginner performance mistake.",
+    "content": "The most common performance mistake I see from junior data analysts: using df.apply() or a Python for loop to transform DataFrame data row by row. This is slow because it calls Python's interpreter for every single row. Vectorized pandas operations (arithmetic, string methods with .str, datetime with .dt) run in compiled C and are typically 100-1000x faster. The rule: if you can express the transformation as an operation on the entire column at once, always do that instead of looping.",
+    "code_example": "import pandas as pd\nimport time\n\ndf = pd.DataFrame({'price': range(100000), 'qty': range(100000)})\n\n# SLOW: Python loop (1.8 seconds on 100k rows)\nstart = time.time()\ndf['revenue_slow'] = df.apply(lambda row: row['price'] * row['qty'], axis=1)\nprint(f'Loop: {time.time()-start:.3f}s')\n\n# FAST: Vectorized (0.001 seconds — 1800x faster!)\nstart = time.time()\ndf['revenue_fast'] = df['price'] * df['qty']\nprint(f'Vector: {time.time()-start:.3f}s')",
+    "senior_tip": "If I see df.apply() in a code review, my first question is always 'can this be vectorized?' 90% of the time, the answer is yes."
+  },
+  {
+    "id": "sql-vs-python",
+    "title": "SQL or Python: the decision framework senior analysts use",
+    "week_unlock": 12,
+    "track": "both",
+    "teaser": "The wrong tool for the job is expensive.",
+    "content": "The question isn't 'can I do this in SQL?' vs 'can I do this in Python?' — you can almost always do either. The question is where should this logic live? Use SQL when: (1) the data lives in a database and you want the database to do the filtering/aggregation (move less data), (2) the logic is a join, aggregation, or filter that SQL expresses naturally, (3) the result needs to be auditable or reproducible by a non-programmer. Use Python when: (1) you need complex conditional logic that SQL CASE statements make ugly, (2) you're doing machine learning or statistical analysis, (3) the transformation requires looping, string manipulation, or regex, (4) you're building a pipeline with multiple steps.",
+    "code_example": "# Golden rule: filter and aggregate in SQL, transform and analyze in Python\n\n# SQL does the heavy lifting (database handles billions of rows efficiently)\nquery = '''\n  SELECT\n    customer_id,\n    SUM(total_amount) as lifetime_value,\n    COUNT(*) as order_count,\n    MAX(order_date) as last_order\n  FROM orders\n  WHERE status = 'complete'\n  GROUP BY customer_id\n'''\n\n# Python handles the analysis (small result set now)\ndf = pd.read_sql(query, conn)\ndf['is_churned'] = (pd.Timestamp.now() - pd.to_datetime(df['last_order'])).dt.days > 90\ndf['segment'] = pd.cut(df['lifetime_value'], bins=[0,100,500,1000,float('inf')],\n                        labels=['Bronze','Silver','Gold','Platinum'])",
+    "senior_tip": "The architecture I use 90% of the time: SQL extracts exactly the rows and columns I need, Python does everything after that."
+  },
+  {
+    "id": "index-strategy",
+    "title": "The indexing strategy that covers 80% of performance problems",
+    "week_unlock": 11,
+    "track": "sql",
+    "teaser": "Three types of indexes solve most slow queries.",
+    "content": "Most slow queries are slow for one of three reasons, and each has a simple fix: (1) Missing index on a foreign key — every column that appears after ON in a JOIN should be indexed. (2) Missing index on a frequently-filtered column — if you query WHERE status = 'complete' a thousand times a day, index that column. (3) The query returns too many columns — SELECT * forces the database to load the entire row from disk even when you only need 2 columns. A covering index (an index that includes all queried columns) eliminates disk reads entirely. The EXPLAIN command tells you which of these is happening.",
+    "code_example": "-- Before optimization: query takes 8 seconds on 10M rows\nSELECT * FROM orders WHERE customer_id = 12345 AND status = 'complete';\n\n-- Step 1: Check the query plan\nEXPLAIN QUERY PLAN SELECT * FROM orders WHERE customer_id = 12345;\n-- Output: SCAN TABLE orders (full scan = slow!)\n\n-- Step 2: Add the right index\nCREATE INDEX idx_orders_customer_status ON orders(customer_id, status);\n\n-- Step 3: Verify (now uses index)\nEXPLAIN QUERY PLAN SELECT * FROM orders WHERE customer_id = 12345;\n-- Output: SEARCH TABLE orders USING INDEX (fast!)",
+    "senior_tip": "I add indexes as part of the same PR that adds the query. Indexes are not an afterthought — they're part of the schema design."
+  },
+  {
+    "id": "window-function-power",
+    "title": "Window functions: the most underused SQL feature",
+    "week_unlock": 6,
+    "track": "sql",
+    "teaser": "ROW_NUMBER(), RANK(), LAG() and LEAD() make complex analyses trivial.",
+    "content": "Window functions let you compute aggregations without collapsing rows — you can see both the individual row AND the group summary in the same result. This eliminates entire categories of subquery complexity. The three patterns I use weekly: (1) ROW_NUMBER() OVER (PARTITION BY x ORDER BY y) — rank rows within a group, (2) LAG()/LEAD() — compare each row to the previous or next row, (3) SUM() OVER (PARTITION BY x ORDER BY date) — running totals without a self-join. If you find yourself writing a self-join or correlated subquery to compare rows to other rows, a window function almost certainly solves it more cleanly.",
+    "code_example": "-- Find the top 3 products per category by revenue\nSELECT *\nFROM (\n  SELECT\n    category,\n    product_name,\n    revenue,\n    ROW_NUMBER() OVER (\n      PARTITION BY category\n      ORDER BY revenue DESC\n    ) AS rank_in_category\n  FROM product_sales\n) ranked\nWHERE rank_in_category <= 3;\n\n-- Month-over-month revenue change using LAG()\nSELECT\n  month,\n  revenue,\n  LAG(revenue) OVER (ORDER BY month) AS prev_month,\n  revenue - LAG(revenue) OVER (ORDER BY month) AS change\nFROM monthly_revenue;",
+    "senior_tip": "I once rewrote a 47-line query with three self-joins into 12 lines using window functions. The original took 2 minutes; the rewrite took 0.3 seconds."
+  }
+]

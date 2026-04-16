@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { streamSageChat, buildSageSystemPrompt, SageMessage } from '@/api/sage'
+import { getWeekLesson } from '@/data/lessons'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -359,7 +360,13 @@ const SageTutor: React.FC<SageTutorProps> = ({
       }
       setMessages((prev) => [...prev, assistantMsg])
 
-      const systemPrompt = buildSageSystemPrompt(currentWeek, currentTopic, currentPhase)
+      const weekLesson = getWeekLesson(currentWeek)
+      const lessonContent = weekLesson
+        ? [...(weekLesson.sql || []), ...(weekLesson.python || [])]
+            .map(s => `${s.title}\n${s.content}`)
+            .join('\n\n')
+        : ''
+      const systemPrompt = buildSageSystemPrompt(currentWeek, currentTopic, currentPhase, lessonContent)
 
       const history: SageMessage[] = messages
         .concat(userMsg)

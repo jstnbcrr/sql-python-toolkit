@@ -28,63 +28,80 @@ export const LESSONS: WeekLesson[] = [
         title: 'What is a Database?',
         content: `Bobby Iliev's SQL book opens with this definition: "A database is an organized collection of data, generally stored and accessed electronically from a computer system."
 
-In plain terms: a database is a collection of data structured into tables. Iliev compares it to spreadsheets — and that's a good starting point. You've probably used Excel or Google Sheets. A database table works the same way at first glance: rows of data, columns of attributes.
+Before databases, businesses kept records in flat files — literally text files or spreadsheets. That works for small operations. It breaks down the moment you need to answer questions like: "Which Panda Express menu items in the Entrees category sold more than 200 units last Tuesday?" A spreadsheet becomes a tangle of VLOOKUP formulas. A database answers in one clean query.
 
-The difference is scale and precision. A spreadsheet handles hundreds of rows comfortably. A database handles millions. And unlike a spreadsheet, a database enforces rules — data types, required fields, relationships between tables.
+The standard type of database used in business is a **relational database**. "Relational" means data is stored in tables that can be connected to each other. Iliev defines it: a relational database management system (RDBMS) "stores data in tables and allows you to define relationships between tables." An orders table relates to a customers table relates to a menu table. You can trace any thread through the data.
 
-For our purposes: the Panda Express menu is a table. Each row is one menu item. Each column is an attribute of that item — name, category, price, calories. That's a database.
+The database we use in this app is **SQLite**. It stores an entire database in a single file — no server needed. The same SQL you write here works on MySQL, PostgreSQL, and SQL Server with minor syntax variations. The fundamentals are universal.
 
-The type we use in this app is a **relational database** (specifically SQLite). "Relational" means tables can be linked to each other. An orders table can reference a menu table. A bus routes table can reference a stops table. That linking is what makes databases powerful.`,
+**Why SQL before Python for data work?** Because data almost always lives in a database first. Python code that can't reach a database is limited to pre-made files. SQL is the language of the data layer. A manager asking "how much did we sell last Tuesday?" isn't thinking about Python loops — they're thinking about a number that lives in a table. SQL is the most direct path to that number.
+
+Iliev's context: "There are many different database management systems. MySQL, PostgreSQL, SQLite, Microsoft SQL Server, Oracle Database" — and they all speak SQL. The syntax differences are minor. What you learn here transfers.`,
       },
       {
         title: 'Tables, Rows, and Columns',
-        content: `From Iliev's book, a table has columns with specific data types. He lists the most common ones:
+        content: `A database is made of tables. A table is made of columns (the structure) and rows (the data). From Iliev's book, every column has a defined data type that controls what values it can hold:
 
-- \`INT\` — whole numbers (quantity: 3, store_id: 12)
-- \`VARCHAR(n)\` — text up to n characters (item_name, category)
-- \`TEXT\` — longer text with no fixed limit
-- \`BOOLEAN\` — true or false
-- \`DATE\` — a calendar date
+- \`INT\` — whole numbers: quantity: 3, store_id: 12, week: 1
+- \`DECIMAL(8,2)\` — decimal numbers with precision: price: 6.99, revenue: 12450.75
+- \`VARCHAR(n)\` — variable-length text up to n characters: name: "Orange Chicken"
+- \`TEXT\` — longer text with no fixed limit: description, notes
+- \`BOOLEAN\` — true or false (stored as 1/0 in SQLite)
+- \`DATE\` — calendar date as YYYY-MM-DD: 2024-03-15
+- \`DATETIME\` — date + time: 2024-03-15 14:22:05
 
-The menu table in this week's database looks like this:
+The menu_items table in this week's database:
 
 ~~~
-+----+----------------+----------+-------+----------+
-| id | item_name      | category | price | calories |
-+----+----------------+----------+-------+----------+
-|  1 | Orange Chicken | Entrees  |  6.99 |      490 |
-|  2 | Fried Rice     | Sides    |  3.99 |      520 |
-|  3 | Chow Mein      | Sides    |  3.99 |      510 |
-+----+----------------+----------+-------+----------+
+id | name                  | category | price | calories
+---+-----------------------+----------+-------+---------
+ 1 | Orange Chicken        | Entrees  |  6.99 |      490
+ 2 | Fried Rice            | Sides    |  3.99 |      520
+ 3 | Chow Mein             | Sides    |  3.99 |      510
+ 4 | Honey Walnut Shrimp   | Entrees  |  8.99 |      360
+ 5 | Fountain Drink        | Drinks   |  2.49 |        0
 ~~~
 
-Each row is one menu item. Each column holds one type of information. The \`id\` column is the **primary key** — it uniquely identifies each row. No two items share an id.
+Each row is one menu item. Each column holds exactly one kind of information. The \`id\` column is the **primary key** — it uniquely identifies every row. No two items share an id. That uniqueness is enforced by the database, not by you.
 
-This structure is not arbitrary. Separating data into typed columns is what lets SQL ask precise questions of it.`,
+Iliev's point about data types is practical: "If you define a column as INT, the database won't let you insert text into it." The database enforces the contract. This is the biggest difference from a spreadsheet — in Excel, nothing stops you from typing "six" in a Price column. A database rejects it.
+
+**Column constraints** Iliev covers:
+- \`NOT NULL\` — the field must have a value; blank is not allowed
+- \`PRIMARY KEY\` — uniquely identifies each row; automatically NOT NULL
+- \`DEFAULT value\` — used when no value is provided on insert
+- \`UNIQUE\` — no two rows can have the same value in this column
+
+Constraints are how a database stays trustworthy. Data that violates a constraint is rejected at write time — not discovered weeks later in a report.`,
       },
       {
         title: 'SELECT — Retrieving Data',
-        content: `Iliev's book breaks down the SELECT statement like this:
+        content: `Iliev's breakdown: "SELECT — First, we specify the action we want to execute. * — The star indicates we want to get all columns. FROM — tells the database which table we want to select from."
 
-~~~sql
-SELECT * FROM users;
-~~~
-
-His rundown: "SELECT — First, we specify the action we want to execute. * — The star indicates we want to get all columns. FROM — tells MySQL which table we want to select from."
-
-In our context:
+The most basic query:
 
 ~~~sql
 SELECT * FROM menu_items;
 ~~~
 
-This returns every row, every column. The \`*\` is a wildcard meaning "all columns." For exploration it's fine. For production queries, you want to name the columns explicitly:
+The \`*\` means "all columns." Every row, every column comes back. Fine for exploration — expensive on large tables. Name the columns you actually need:
 
 ~~~sql
-SELECT name, price FROM menu_items;
+SELECT name, price, calories
+FROM menu_items;
 ~~~
 
-This returns only the item name and price. When a table has 30 columns and you need 3, naming them is essential.
+**Column aliases with AS** — rename columns in the output:
+
+~~~sql
+SELECT
+    name        AS item_name,
+    price       AS price_usd,
+    calories    AS cal_count
+FROM menu_items;
+~~~
+
+The database column stays named \`name\` — you're only renaming it in the output. Aliases matter when presenting results to non-technical people or when a calculated column needs a readable label.
 
 **ORDER BY** — control the sort order:
 
@@ -94,9 +111,15 @@ FROM menu_items
 ORDER BY price DESC;
 ~~~
 
-\`DESC\` = descending (highest first). \`ASC\` = ascending (lowest first, and is the default).
+\`DESC\` = highest first. \`ASC\` = lowest first (default when not specified). Sort by multiple columns — the first breaks ties, the second resolves them:
 
-**LIMIT** — cap the result:
+~~~sql
+SELECT name, category, price
+FROM menu_items
+ORDER BY category ASC, price DESC;
+~~~
+
+**LIMIT** — cap the number of rows returned:
 
 ~~~sql
 SELECT name, price
@@ -105,36 +128,110 @@ ORDER BY price DESC
 LIMIT 5;
 ~~~
 
-The 5 most expensive items. Iliev notes that clause order matters: SELECT → FROM → ORDER BY → LIMIT. SQL expects them in this sequence.`,
+The 5 most expensive items. Iliev's note: clause order is fixed. SQL requires: SELECT → FROM → ORDER BY → LIMIT. They cannot be shuffled.
+
+**Comments in SQL** — use \`--\` for a single-line comment:
+
+~~~sql
+-- Find the most expensive menu items
+SELECT name, price
+FROM menu_items
+ORDER BY price DESC
+LIMIT 5;
+~~~
+
+Comments are documentation. A query you wrote three months ago with no comments is a puzzle. A query with one clear comment tells the next person (or your future self) exactly what it does.`,
       },
       {
         title: 'DISTINCT and Pattern Matching',
-        content: `**DISTINCT** removes duplicate values from results. Use it when you want to know what unique values exist:
+        content: `**DISTINCT** removes duplicate values. Use it when you want to see what unique values exist in a column:
 
 ~~~sql
 SELECT DISTINCT category FROM menu_items;
 ~~~
 
-Without DISTINCT you'd get one row per menu item, category repeated for each. With it — one row per category.
+Without DISTINCT: one row per menu item, category repeating for each. With DISTINCT: one row per category. For a table with 30 Entrees and 15 Sides, DISTINCT gives you 2 rows instead of 45.
+
+Applied to multiple columns — returns unique combinations:
+
+~~~sql
+SELECT DISTINCT category, price FROM menu_items;
+~~~
 
 **LIKE** — Iliev covers this under "Pattern Matching." Two wildcard characters:
 - \`%\` — matches any number of characters (including zero)
 - \`_\` — matches exactly one character
 
 ~~~sql
--- Items whose name ends with "Chicken"
+-- Items ending with "Chicken"
 SELECT * FROM menu_items WHERE name LIKE '%Chicken';
 
--- Items whose name contains "rice" anywhere
-SELECT * FROM menu_items WHERE name LIKE '%rice%';
+-- Items containing "Rice" anywhere (case-insensitive in SQLite)
+SELECT * FROM menu_items WHERE name LIKE '%Rice%';
 
--- Items starting with exactly one character then "ried"
-SELECT * FROM menu_items WHERE name LIKE '_ried%';
+-- Items whose name is exactly 9 characters starting with "Fried"
+SELECT * FROM menu_items WHERE name LIKE 'Fried____';
 ~~~
 
-Iliev's example from the book: \`SELECT * FROM users WHERE username LIKE '%y'\` — finds usernames ending with the letter y. Same logic, different table.
+Iliev's example from the book: \`SELECT * FROM users WHERE username LIKE '%y'\` — usernames ending in the letter y. Same pattern, different table.
 
-Run \`SELECT DISTINCT category FROM menu_items\` first. That tells you what categories exist. Then use LIKE to explore naming patterns. That two-step exploration is how you start with any new dataset.`,
+**The exploration workflow** every analyst uses when starting with a new dataset:
+
+~~~sql
+-- Step 1: what tables exist?
+SELECT name FROM sqlite_master WHERE type = 'table';
+
+-- Step 2: what does the data look like?
+SELECT * FROM menu_items LIMIT 5;
+
+-- Step 3: what unique categories exist?
+SELECT DISTINCT category FROM menu_items;
+
+-- Step 4: how many items are there?
+SELECT COUNT(*) FROM menu_items;
+~~~
+
+Run these four queries on any new table before writing anything complex. They answer "what am I working with?" before you commit to an approach.`,
+      },
+      {
+        title: 'How SQL Evaluates a Query',
+        content: `Here's something Iliev makes clear that trips up beginners: SQL doesn't execute in the order you write it. Written order: SELECT → FROM → WHERE → ORDER BY. Execution order:
+
+~~~
+1. FROM        — choose and load the table
+2. WHERE       — filter rows down
+3. GROUP BY    — group them (week 3)
+4. HAVING      — filter groups (week 3)
+5. SELECT      — choose which columns / calculate values
+6. ORDER BY    — sort the results
+7. LIMIT       — cap the count
+~~~
+
+**Why this matters in practice:**
+
+WHERE runs before SELECT. That means column aliases defined in SELECT are not yet visible when WHERE runs. This query fails:
+
+~~~sql
+-- BROKEN — alias 'price_usd' doesn't exist when WHERE runs
+SELECT price AS price_usd FROM menu_items
+WHERE price_usd > 5;
+
+-- CORRECT — use the original column name
+SELECT price AS price_usd FROM menu_items
+WHERE price > 5;
+~~~
+
+ORDER BY runs after SELECT, so aliases ARE visible there:
+
+~~~sql
+-- FINE — aliases work in ORDER BY
+SELECT price AS price_usd FROM menu_items
+ORDER BY price_usd DESC;
+~~~
+
+FROM runs before SELECT, which means the database scans the table before it knows which columns you want. Writing \`SELECT *\` vs \`SELECT name, price\` doesn't change what rows get scanned — it only changes what columns come back. On large tables, this is why adding an index (a week 7 topic) on the WHERE column speeds things up.
+
+Understanding this order makes SQL error messages readable. When you see "column does not exist" or "ambiguous column reference," the execution order tells you which clause is running and why the column isn't visible yet.`,
       },
     ],
     python: [
@@ -142,92 +239,190 @@ Run \`SELECT DISTINCT category FROM menu_items\` first. That tells you what cate
         title: 'Expressions and the Interactive Shell',
         content: `Sweigart opens Chapter 1 of Automate the Boring Stuff with this: "You can run the interactive shell by launching the Mu editor... You should see a >>> prompt."
 
-In this app, the Python editor IS that interactive shell — but more powerful. You type code, press Run, and see results immediately.
+In this app, the Python editor IS that interactive shell — but you can write multiple lines and run them together. Type code, press Run, see results immediately. No setup, no file saving, no compile step.
 
-The most basic Python instruction is an **expression** — a value combined with an operator that reduces to a single value:
+The most basic Python instruction is an **expression** — a combination of values and operators that reduces to a single value:
 
 ~~~python
-2 + 2        # evaluates to 4
-5 * 3        # evaluates to 15
-22 / 8       # evaluates to 2.75
-22 // 8      # evaluates to 2  (floor division — drops the decimal)
-22 % 8       # evaluates to 6  (modulus — the remainder)
-2 ** 3       # evaluates to 8  (exponent — 2 to the power of 3)
+2 + 2         # 4
+5 * 3         # 15
+22 / 8        # 2.75   (true division — always returns a float)
+22 // 8       # 2      (floor division — drops the decimal)
+22 % 8        # 6      (modulus — the remainder after division)
+2 ** 3        # 8      (exponent — 2 to the power of 3)
 ~~~
 
-Sweigart's operator precedence table (highest to lowest): \`**\` first, then \`*\`, \`/\`, \`//\`, \`%\`, then \`+\` and \`-\`. Same as math class. Use parentheses to override: \`(2 + 3) * 4\` = 20, not 14.
+Sweigart's operator precedence (highest to lowest): \`**\` first, then \`*\`, \`/\`, \`//\`, \`%\`, then \`+\` and \`-\`. Use parentheses to override:
 
-**Errors are okay.** Sweigart's note: "An error message won't break your computer, so don't be afraid to make mistakes. A crash just means the program stopped running unexpectedly." Every programmer reads error messages constantly. It's normal.`,
+~~~python
+2 + 3 * 4     # 14 — multiplication happens first
+(2 + 3) * 4   # 20 — parentheses force addition first
+~~~
+
+The modulo operator \`%\` is worth memorizing. It gives you the remainder: \`22 % 8 = 6\` means "22 divided by 8 leaves 6 left over." Real uses: check if a number is even (\`n % 2 == 0\`), cycle through values, split items into groups.
+
+**Errors are normal.** Sweigart: "An error message won't break your computer, so don't be afraid to make mistakes. A crash just means the program stopped running unexpectedly." Python error messages are informative — they tell you the line number and the type of problem. Reading them is a skill you build by seeing many of them.
+
+When Python can't evaluate an expression, it raises an exception. \`10 / 0\` gives a ZeroDivisionError. \`int("abc")\` gives a ValueError. The error name tells you what went wrong; the message tells you where.`,
       },
       {
         title: 'Variables and Data Types',
-        content: `From Sweigart Chapter 1 — variables store values so you can use them later:
+        content: `From Sweigart Chapter 1 — variables store values so you can use them later. A variable is a name that points to a value in memory:
 
 ~~~python
-item_name = "Orange Chicken"
+item_name = "Orange Chicken"   # str
+price     = 6.99               # float
+quantity  = 3                  # int
+in_stock  = True               # bool
+~~~
+
+The four core data types:
+- \`str\` — text in quotes: \`"Orange Chicken"\` or \`'Orange Chicken'\` (both work)
+- \`int\` — whole number: \`3\`, \`42\`, \`-7\`
+- \`float\` — decimal: \`6.99\`, \`3.14\`, \`-0.5\`
+- \`bool\` — exactly \`True\` or \`False\` (capital first letter, no quotes)
+
+Variable naming rules from Sweigart: one word, no spaces, letters/numbers/underscores only, can't start with a number. \`item_name\` ✓, \`1item\` ✗, \`item name\` ✗.
+
+The \`type()\` function tells you what type a value is:
+
+~~~python
+type("Orange Chicken")   # <class 'str'>
+type(6.99)               # <class 'float'>
+type(3)                  # <class 'int'>
+type(True)               # <class 'bool'>
+~~~
+
+**Type conversion** — converting between types:
+
+~~~python
+str(3.99)       # "3.99"   — number becomes a string
+int("42")       # 42       — string becomes an integer
+float("6.99")   # 6.99     — string becomes a float
+int(6.99)       # 6        — drops the decimal (truncates, doesn't round)
+bool(0)         # False    — zero is falsy
+bool(42)        # True     — any non-zero number is truthy
+bool("")        # False    — empty string is falsy
+bool("hi")      # True     — any non-empty string is truthy
+~~~
+
+Type conversion matters constantly. Data from files, databases, and user input often arrives as strings even when you need numbers. The pattern \`int(input("How many? "))\` appears in nearly every beginner program.
+
+**The SQL connection:** SQL's \`INT\`, \`VARCHAR\`, \`DECIMAL\`, \`BOOLEAN\` map directly to Python's \`int\`, \`str\`, \`float\`, \`bool\`. Same concept, different syntax. When you pull data from a database into Python, numeric columns become \`int\` or \`float\`, text columns become \`str\`.`,
+      },
+      {
+        title: 'Strings in Depth',
+        content: `Sweigart spends significant time on strings because text is everywhere in real data — item names, category labels, customer notes, addresses. A \`str\` in Python is a sequence of characters.
+
+**String concatenation** with \`+\`:
+
+~~~python
+first = "Orange"
+last  = "Chicken"
+full  = first + " " + last
+print(full)   # Orange Chicken
+~~~
+
+**f-strings** — the modern way to embed variables in text:
+
+~~~python
+item  = "Orange Chicken"
 price = 6.99
-quantity = 3
-in_stock = True
+print(f"{item} costs \${price:.2f}")   # Orange Chicken costs $6.99
 ~~~
 
-The four basic data types Sweigart covers:
-- \`str\` — text in quotes: \`"Orange Chicken"\`
-- \`int\` — whole number: \`3\`
-- \`float\` — decimal number: \`6.99\`
-- \`bool\` — exactly \`True\` or \`False\` (capital T/F, no quotes)
+The \`f\` before the quote makes it an f-string. Anything in \`{}\` is evaluated and inserted. \`:.2f\` formats a float to 2 decimal places.
 
-Variable naming rules from Sweigart: "It can be only one word with no spaces. It can use only letters, numbers, and the underscore character. It can't begin with a number." So \`item_name\` is valid, \`1item\` is not.
-
-**Type conversion** — Sweigart shows how to switch between types:
+**Built-in string methods** — functions you call on any string:
 
 ~~~python
-str(3.99)    # turns the number 3.99 into the string "3.99"
-int("42")    # turns the string "42" into the number 42
-float("6.99") # turns the string "6.99" into the number 6.99
+name = "  orange chicken  "
+name.strip()             # "orange chicken"   — removes surrounding whitespace
+name.strip().title()     # "Orange Chicken"   — chained calls
+
+name = "Orange Chicken"
+name.upper()             # "ORANGE CHICKEN"
+name.lower()             # "orange chicken"
+name.replace("Chicken", "Beef")   # "Orange Beef"
+name.startswith("Orange")         # True
+name.endswith("Chicken")          # True
+name.count("n")                   # 2
+name.split(" ")                   # ["Orange", "Chicken"]
 ~~~
 
-This matters when data comes in as text that needs to be treated as a number — which happens constantly with real-world data.`,
+**String indexing and slicing** — Sweigart: strings work like lists of characters:
+
+~~~python
+name = "Orange Chicken"
+name[0]      # "O"       — index 0 is first character
+name[-1]     # "n"       — negative index counts from end
+name[0:6]    # "Orange"  — slice: start up to (not including) end
+name[7:]     # "Chicken" — from index 7 to end
+len(name)    # 14
+~~~
+
+**Why this matters:** McKinney's data cleaning chapter says analysts spend 80% of their time preparing data. Dirty strings — extra whitespace, inconsistent case, mixed formats — are responsible for much of that. \`.strip()\`, \`.lower()\`, \`.replace()\` are your first line of defense. In data work, you'll clean strings before almost every analysis.`,
       },
       {
         title: 'print(), input(), and len()',
-        content: `Sweigart introduces three built-in functions in Chapter 1 that you'll use constantly:
+        content: `Sweigart's three workhorses from Chapter 1 that appear in virtually every Python program:
 
-**print()** — displays output:
+**print()** — display output. Accepts any number of arguments, separates them with spaces:
 
 ~~~python
 print("Hello, Panda Express")
-print(item_name)
-print("Item:", item_name, "Price:", price)
+print("Item:", item_name, "| Price:", price)
+print()   # empty line
 ~~~
 
-When you pass multiple things to \`print()\`, it separates them with a space automatically.
-
-**f-strings** — Sweigart covers string formatting as the modern way to embed variables in text:
+**Separator and end parameters** — advanced print options:
 
 ~~~python
-item_name = "Orange Chicken"
-price = 6.99
-print(f"{item_name} costs \${price:.2f}")
-# Orange Chicken costs $6.99
+# Default separator is a space; override with sep=
+print("Orange", "Chicken", sep="-")   # Orange-Chicken
+
+# Default end is newline; override with end=
+print("Loading", end="...")
+print("done")   # prints: Loading...done  (on the same line)
 ~~~
 
-The \`f\` before the quote activates f-string mode. Variables in \`{curly braces}\` get replaced with their values. The \`:.2f\` after a variable formats it as a decimal with 2 places.
-
-**input()** — reads text typed by the user:
+**Aligned output with f-strings** — useful for reports:
 
 ~~~python
-name = input("What is your name? ")
-print(f"Hello, {name}")
+items = [("Orange Chicken", 6.99, 490), ("Fried Rice", 3.99, 520)]
+
+print(f"{'Item':<20} {'Price':>7} {'Cal':>6}")
+print("-" * 35)
+for name, price, cal in items:
+    print(f"{name:<20} \${price:>6.2f} {cal:>6}")
+
+# Item                   Price    Cal
+# -----------------------------------
+# Orange Chicken          $6.99    490
+# Fried Rice              $3.99    520
 ~~~
 
-**len()** — returns the length of a string or list:
+\`<\` left-aligns, \`>\` right-aligns, the number is the column width. This creates clean tabular output.
+
+**len()** — count characters in a string, or items in a list:
 
 ~~~python
-len("Orange Chicken")   # 14
-len([1, 2, 3])          # 3
+len("Orange Chicken")       # 14
+len(["Entrees", "Sides"])   # 2
 ~~~
 
-SQL equivalent: \`LENGTH(item_name)\` does the same thing as Python's \`len(item_name)\`.`,
+SQL equivalent: \`LENGTH(name)\` does exactly what Python's \`len(name)\` does.
+
+**input()** — reads typed input. Always returns a string:
+
+~~~python
+item = input("Enter item name: ")
+qty  = int(input("How many? "))   # convert to int right away
+total = qty * 6.99
+print(f"Total for {qty}x {item}: \${total:.2f}")
+~~~
+
+The pattern \`int(input(...))\` is so common it becomes muscle memory. Read first, convert second.`,
       },
     ],
   },
@@ -240,127 +435,242 @@ SQL equivalent: \`LENGTH(item_name)\` does the same thing as Python's \`len(item
         title: 'WHERE — Filtering Rows',
         content: `Iliev's book: "You can use SELECT to get all of your users or a list of users that match a certain criteria."
 
-The WHERE clause is that criteria. It filters which rows come back:
+The WHERE clause is that criteria. It filters which rows come back before any output is produced. Without it you get everything; with it you get only what matches:
 
 ~~~sql
-SELECT * FROM orders
+SELECT * FROM menu_items
 WHERE category = 'Entrees';
 ~~~
 
-Only rows where category is exactly 'Entrees' come back. Iliev's rundown: the WHERE clause is evaluated before SELECT — the database filters first, then decides what to show you.
+Only rows where category is exactly 'Entrees' come back. Iliev's point: WHERE is evaluated before SELECT — the database filters first, then decides what to show you.
 
-Comparison operators:
-- \`=\` equals (note: single = in SQL, not ==)
-- \`!=\` or \`<>\` not equals
-- \`>\` greater than, \`<\` less than
-- \`>=\` greater than or equal, \`<=\` less than or equal
+**All comparison operators:**
 
 ~~~sql
-SELECT name, price FROM orders
-WHERE price > 5.00;
+-- Equality and inequality
+WHERE category = 'Entrees'       -- equals (single = in SQL, not ==)
+WHERE category != 'Drinks'       -- not equal
+WHERE category <> 'Drinks'       -- also not equal (older style)
 
-SELECT * FROM orders
-WHERE status != 'cancelled';
+-- Numeric comparisons
+WHERE price > 5.00
+WHERE price >= 5.00              -- greater than or equal
+WHERE calories < 400
+WHERE calories <= 400
+
+-- String comparisons (alphabetical)
+WHERE name > 'M'                 -- names that come after M alphabetically
 ~~~
 
-Important detail from Iliev: text values use single quotes (\`'Entrees'\`). Numbers do not use quotes (\`5.00\`). Mixing these up is one of the most common beginner SQL errors.`,
+Important detail from Iliev: text values always use single quotes (\`'Entrees'\`). Numbers never use quotes (\`5.00\`). Mixing these up is one of the most common beginner SQL errors — and the database gives you an obscure error message instead of telling you exactly what's wrong.
+
+**Filtering with calculations** — you can use expressions in WHERE:
+
+~~~sql
+-- Items with more than 100 calories per dollar (poor value)
+SELECT name, price, calories
+FROM menu_items
+WHERE (calories / price) > 100;
+~~~
+
+WHERE evaluates the expression for every row and keeps the ones where it's true.`,
       },
       {
-        title: 'AND, OR, NOT',
-        content: `Iliev covers combining conditions to narrow or broaden filters:
+        title: 'AND, OR, NOT — Combining Conditions',
+        content: `Iliev covers combining conditions to narrow or broaden filters. AND requires both conditions to be true; OR requires at least one:
 
 ~~~sql
-SELECT * FROM orders
+-- Both must be true — Entrees AND expensive
+SELECT name, price FROM menu_items
 WHERE category = 'Entrees'
-  AND quantity > 2;
-~~~
+  AND price > 7.00;
 
-AND means BOTH conditions must be true. OR means at least one must be:
-
-~~~sql
-SELECT * FROM orders
+-- Either can be true — Entrees OR Sides
+SELECT name, category FROM menu_items
 WHERE category = 'Entrees'
    OR category = 'Sides';
-~~~
 
-NOT inverts a condition:
-
-~~~sql
-SELECT * FROM orders
+-- NOT inverts a condition
+SELECT name, category FROM menu_items
 WHERE NOT category = 'Drinks';
 ~~~
 
-**Operator precedence warning** — AND evaluates before OR, same as multiplication before addition in math. Without parentheses this can produce unexpected results:
+**Operator precedence — the hidden trap.** AND evaluates before OR, exactly like multiplication before addition in math. This query is ambiguous:
 
 ~~~sql
--- AMBIGUOUS — does OR apply to both conditions or just the second?
-WHERE category = 'Entrees' OR category = 'Sides' AND quantity > 3
-
--- EXPLICIT — use parentheses to be clear
-WHERE (category = 'Entrees' OR category = 'Sides') AND quantity > 3
+-- What does this actually mean?
+WHERE category = 'Entrees' OR category = 'Sides' AND price > 7.00
 ~~~
 
-Always use parentheses when mixing AND and OR. It makes your intent clear to both the database and the next person reading your query.`,
+SQL reads it as: \`category = 'Entrees'\` OR \`(category = 'Sides' AND price > 7.00)\`. That probably isn't what you intended. The fix: always use parentheses when mixing AND and OR:
+
+~~~sql
+-- Explicit — what you actually want
+WHERE (category = 'Entrees' OR category = 'Sides')
+  AND price > 7.00
+~~~
+
+**Multiple conditions on one column** — use AND to build a range:
+
+~~~sql
+-- Items between $4 and $8 (inclusive)
+SELECT name, price FROM menu_items
+WHERE price >= 4.00
+  AND price <= 8.00;
+~~~
+
+This is equivalent to \`BETWEEN\` (covered next) but the explicit AND version is sometimes clearer about intent.
+
+Iliev's rule: always use parentheses when mixing AND and OR. It costs nothing and makes your intent clear to both the database and the next person reading your query.`,
       },
       {
         title: 'NULL — The Absent Value',
-        content: `Iliev dedicates a section to NULL because it trips up almost everyone. His book: "By default, each column in your table can hold NULL values."
+        content: `Iliev dedicates a section to NULL because it trips up almost every beginner. His book: "By default, each column in your table can hold NULL values."
 
-NULL means no value was provided — not zero, not an empty string, but genuinely absent. A customer who didn't leave a phone number: their phone column is NULL. An order with no special instructions: notes column is NULL.
+NULL means no value was provided — not zero, not an empty string, but genuinely absent. A customer who skipped the phone field: their phone column is NULL. An order with no notes: notes column is NULL. An item with unknown calories: calories column is NULL.
 
-The trap: you cannot compare NULL with \`=\`:
-
-~~~sql
--- WRONG — this returns nothing, not an error
-SELECT * FROM orders WHERE notes = NULL;
-~~~
-
-The right way:
+**The trap — you cannot compare NULL with \`=\`:**
 
 ~~~sql
--- Correct
-SELECT * FROM orders WHERE notes IS NULL;
-SELECT * FROM orders WHERE notes IS NOT NULL;
+-- WRONG — this returns zero rows, not an error
+SELECT * FROM menu_items WHERE calories = NULL;
+
+-- ALSO WRONG
+SELECT * FROM menu_items WHERE calories != NULL;
 ~~~
 
-Why? Because NULL is not a value — it's the absence of one. The expression \`notes = NULL\` doesn't return true or false; it returns NULL. And NULL is never true.
+Why? Because NULL is not a value — it's the absence of one. The expression \`calories = NULL\` doesn't return true or false; it returns NULL. And NULL is never true, so the WHERE clause filters out every row.
 
-From Iliev: "If you wanted to allow NULL values for a column, you don't need to do anything — it's the default. To prevent NULLs, add NOT NULL when creating the table." In real-world data you'll encounter NULLs constantly. Handling them correctly separates clean analysis from incorrect analysis.`,
+**The correct approach — IS NULL and IS NOT NULL:**
+
+~~~sql
+-- Items where calories is unknown
+SELECT name FROM menu_items WHERE calories IS NULL;
+
+-- Items where calories is known
+SELECT name, calories FROM menu_items WHERE calories IS NOT NULL;
+~~~
+
+**NULL in arithmetic** — NULL propagates. Any arithmetic with NULL returns NULL:
+
+~~~sql
+-- If price is NULL, this whole expression is NULL
+SELECT name, price * 1.1 AS price_with_tax FROM menu_items;
+-- Rows with NULL price come back with NULL tax
+~~~
+
+From Iliev: "To prevent NULLs, add NOT NULL when creating the table." In real-world data you'll encounter NULLs constantly. Checking for them before analysis is not optional — it's the first step in any data quality review.
+
+**COALESCE** — provides a default value when something is NULL:
+
+~~~sql
+SELECT name, COALESCE(calories, 0) AS calories
+FROM menu_items;
+~~~
+
+This substitutes 0 wherever calories is NULL. More on COALESCE in Week 5.`,
       },
       {
-        title: 'IN and BETWEEN',
-        content: `Iliev's book covers shortcuts that make queries more readable.
+        title: 'IN, BETWEEN, and Readable Filters',
+        content: `Iliev covers shortcuts that make WHERE clauses more readable and easier to maintain.
 
-**IN** replaces multiple OR conditions:
+**IN** — replaces a chain of OR conditions:
 
 ~~~sql
 -- Instead of:
-WHERE category = 'Entrees' OR category = 'Sides' OR category = 'Appetizers'
+WHERE category = 'Entrees' OR category = 'Sides' OR category = 'Drinks'
 
 -- Write:
-WHERE category IN ('Entrees', 'Sides', 'Appetizers')
+WHERE category IN ('Entrees', 'Sides', 'Drinks')
 ~~~
 
-**BETWEEN** filters an inclusive range:
+IN works with numbers too:
 
 ~~~sql
-SELECT * FROM orders
-WHERE price BETWEEN 4.00 AND 8.00;
+SELECT * FROM menu_items
+WHERE id IN (1, 3, 7, 12);
 ~~~
 
-Both endpoints are included. This is equivalent to \`price >= 4.00 AND price <= 8.00\`.
-
-**LIKE** with wildcards (from Iliev's pattern matching section):
+**NOT IN** — excludes a list:
 
 ~~~sql
--- Items starting with "Orange"
-SELECT * FROM orders WHERE name LIKE 'Orange%';
-
--- Items containing "Chicken" anywhere
-SELECT * FROM orders WHERE name LIKE '%Chicken%';
+SELECT name FROM menu_items
+WHERE category NOT IN ('Drinks', 'Desserts');
 ~~~
 
-These aren't just shortcuts — they make queries easier to maintain. If you add a new category later, you change one line in the IN list rather than adding another OR.`,
+**BETWEEN** — inclusive range filter:
+
+~~~sql
+SELECT name, price FROM menu_items
+WHERE price BETWEEN 3.00 AND 7.00;
+~~~
+
+Both endpoints are included. Equivalent to \`price >= 3.00 AND price <= 7.00\`, but more readable.
+
+**BETWEEN with dates** — one of its most common uses:
+
+~~~sql
+SELECT * FROM sales
+WHERE sale_date BETWEEN '2024-01-01' AND '2024-03-31';
+~~~
+
+The date format SQLite uses is \`'YYYY-MM-DD'\`. Always in quotes, always this order.
+
+**Why these matter beyond readability:** If you add a new category to your menu, you update one IN list instead of finding every OR chain that references categories throughout your queries. Maintainability is part of writing good SQL — not just correctness.`,
+      },
+      {
+        title: 'String Functions in WHERE',
+        content: `Iliev covers string functions as tools for filtering and transforming text. In WHERE clauses, they let you clean or normalize data on the fly before comparing.
+
+**UPPER() and LOWER()** — standardize case for comparison:
+
+~~~sql
+-- Find regardless of how the category was typed
+SELECT * FROM menu_items
+WHERE LOWER(category) = 'entrees';
+
+-- This catches 'Entrees', 'ENTREES', 'entrees', 'EnTReEs'
+~~~
+
+**TRIM()** — remove leading and trailing whitespace:
+
+~~~sql
+SELECT * FROM menu_items
+WHERE TRIM(name) = 'Orange Chicken';
+-- Matches even if someone stored "  Orange Chicken  " by mistake
+~~~
+
+**LENGTH()** — filter by string length:
+
+~~~sql
+-- Items with short names (good for label space)
+SELECT name FROM menu_items
+WHERE LENGTH(name) <= 10;
+
+-- Items with suspiciously short names (possible data entry errors)
+SELECT name FROM menu_items
+WHERE LENGTH(name) < 3;
+~~~
+
+**SUBSTR()** — extract part of a string:
+
+~~~sql
+-- Items that start with 'Or' (first 2 characters)
+SELECT name FROM menu_items
+WHERE SUBSTR(name, 1, 2) = 'Or';
+~~~
+
+\`SUBSTR(column, start_position, length)\` — positions start at 1 in SQL (not 0 like Python).
+
+**REPLACE()** — swap text:
+
+~~~sql
+-- Normalize a misspelling in output (doesn't change the stored data)
+SELECT REPLACE(name, 'Chiken', 'Chicken') AS corrected_name
+FROM menu_items;
+~~~
+
+These functions run on every row, so they can slow down large queries if used in WHERE. Keeping source data clean (correct case, no extra spaces) is always better than filtering around it at query time.`,
       },
     ],
     python: [
@@ -368,45 +678,60 @@ These aren't just shortcuts — they make queries easier to maintain. If you add
         title: 'Boolean Values and Comparison Operators',
         content: `Sweigart opens Chapter 2: "Before you learn about flow control statements, you first need to learn how to represent those yes and no options."
 
-Boolean values in Python are exactly \`True\` or \`False\` — capitalized, no quotes. Sweigart's example from the interactive shell:
+Boolean values in Python are exactly \`True\` or \`False\` — capitalized, no quotes. They're not strings:
 
 ~~~python
-spam = True
-spam          # True
-
-true          # NameError: name 'true' is not defined
-              # (lowercase 'true' doesn't work)
+True    # valid — the boolean True
+"True"  # valid — the string "True" (completely different thing)
+true    # NameError — Python is case-sensitive; 'true' is undefined
 ~~~
 
-Comparison operators produce Boolean values:
+**Comparison operators** produce booleans:
 
 ~~~python
 price = 6.99
 
-price > 5          # True
-price == 6.99      # True  (== compares, = assigns — different!)
-price != 10        # True
-price < 3          # False
+price > 5           # True
+price >= 6.99       # True
+price == 6.99       # True  (== compares values)
+price = 6.99        # SyntaxError if used in an expression
+                    # (= is assignment, not comparison)
+price != 10         # True
+price < 3           # False
 ~~~
 
-Sweigart notes: "The == operator (equal to) asks whether two values are the same. The = operator (assignment) puts the value on the right into the variable on the left." This is one of the most common beginner mistakes — using = when you mean ==.
+Sweigart's key note: "The == operator asks whether two values are the same as each other. The = operator puts the value on the right into the variable on the left." Using = instead of == in a condition is one of the most common errors beginners make.
 
-Boolean operators: \`and\`, \`or\`, \`not\` (all lowercase in Python, unlike SQL's AND/OR/NOT):
+**Boolean operators** — \`and\`, \`or\`, \`not\` (lowercase in Python):
 
 ~~~python
 category = "Entrees"
-quantity = 4
+quantity  = 4
+price     = 6.99
 
-category == "Entrees" and quantity > 2   # True
-category == "Drinks"  or  price < 3      # False
-not (price > 10)                         # True
+category == "Entrees" and quantity > 2    # True (both true)
+category == "Drinks"  or  price < 10     # True (second is true)
+not (price > 10)                         # True (price is not > 10)
+~~~
+
+**Short-circuit evaluation** — Sweigart notes Python stops evaluating as soon as the result is determined. For \`and\`: if the first condition is False, the second is never checked. For \`or\`: if the first is True, the second is skipped. This matters when the second condition would cause an error if evaluated with certain inputs.
+
+**Truthiness** — in Python, values can be "truthy" or "falsy" without being literal True/False:
+
+~~~python
+bool(0)      # False — zero is falsy
+bool(1)      # True  — any non-zero is truthy
+bool("")     # False — empty string is falsy
+bool("hi")   # True  — non-empty string is truthy
+bool([])     # False — empty list is falsy
+bool([1,2])  # True  — non-empty list is truthy
 ~~~`,
       },
       {
         title: 'if / elif / else — Flow Control',
         content: `From Sweigart Chapter 2: "Flow control statements can decide which Python instructions to execute under which conditions."
 
-He uses flowchart diagrams in the book — branching paths with diamonds (decisions) and rectangles (actions). The \`if\` statement is that diamond:
+He uses flowchart diagrams — branching paths with diamonds (decisions) and rectangles (actions). The \`if\` statement is that decision diamond:
 
 ~~~python
 price = 6.99
@@ -417,52 +742,160 @@ elif price > 5:
     print("Standard item")
 else:
     print("Budget item")
+# Output: Standard item
 ~~~
 
-Sweigart's structure: the \`if\` keyword, a condition, a colon. Then an indented block — "the clause" — that runs when the condition is True. The \`elif\` (else if) checks another condition only if the first was False. The \`else\` runs only if nothing above was True.
+Structure: \`if\` keyword → condition → colon → indented block. The block runs only when the condition is True. \`elif\` (else-if) is checked only if the previous condition was False. \`else\` runs only if nothing above was True.
 
-**Indentation is the rule.** Python uses 4 spaces (or one tab) to mark a block. Sweigart: "Python knows where the if block ends when it encounters a statement that is indented as much as the initial if statement." No curly braces — indentation IS the structure.
+**Indentation is the structure.** Python uses 4 spaces to mark a code block. Unlike languages that use \`{}\`, Python's indentation is not optional formatting — it's the syntax. Sweigart: "Python knows where the if block ends when it encounters a statement indented as much as the initial if statement."
 
-SQL equivalent: \`CASE WHEN price > 8 THEN 'Premium' WHEN price > 5 THEN 'Standard' ELSE 'Budget' END\` — same logic, different syntax.`,
+**Nested conditions** — an \`if\` inside another \`if\`:
+
+~~~python
+category = "Entrees"
+price    = 9.99
+
+if category == "Entrees":
+    if price > 9:
+        print("Premium entree")
+    else:
+        print("Standard entree")
+else:
+    print("Not an entree")
+~~~
+
+This can also be written with \`and\`:
+
+~~~python
+if category == "Entrees" and price > 9:
+    print("Premium entree")
+~~~
+
+**Practical data classification** — the most common use of if/elif/else in data work:
+
+~~~python
+items = [("Orange Chicken", 6.99), ("Honey Walnut Shrimp", 8.99), ("Fountain Drink", 2.49)]
+
+for name, price in items:
+    if price > 8:
+        tier = "Premium"
+    elif price > 5:
+        tier = "Standard"
+    else:
+        tier = "Budget"
+    print(f"{name:<25} {tier}")
+~~~
+
+SQL equivalent: \`CASE WHEN price > 8 THEN 'Premium' WHEN price > 5 THEN 'Standard' ELSE 'Budget' END\` — identical logic.`,
       },
       {
         title: 'while Loops and for Loops',
         content: `Sweigart Chapter 2 covers both loop types. A **while loop** keeps running as long as a condition is True:
 
 ~~~python
-items_remaining = 3
+items_to_process = 5
 
-while items_remaining > 0:
-    print(f"Processing item, {items_remaining} left")
-    items_remaining = items_remaining - 1
+while items_to_process > 0:
+    print(f"Processing... {items_to_process} left")
+    items_to_process -= 1   # -= is shorthand for = minus 1
 
-print("Done")
+print("Done!")
 ~~~
 
-A **for loop** with \`range()\` runs a fixed number of times. Sweigart: "The range() function returns a sequence of numbers."
+**Infinite loop danger** — if the condition never becomes False, the loop runs forever. Always make sure the loop variable changes each iteration.
+
+**for loops** — iterate over a sequence a fixed number of times. Sweigart: "The range() function returns a sequence of numbers."
 
 ~~~python
 for i in range(5):
-    print(i)       # prints 0, 1, 2, 3, 4
-~~~
+    print(i)       # 0, 1, 2, 3, 4
 
-\`range(start, stop)\` — starts at \`start\`, stops BEFORE \`stop\`:
-
-~~~python
 for i in range(1, 6):
-    print(i)       # prints 1, 2, 3, 4, 5
+    print(i)       # 1, 2, 3, 4, 5
+
+for i in range(0, 10, 2):
+    print(i)       # 0, 2, 4, 6, 8  (step by 2)
 ~~~
 
-For loops also iterate directly over a list (covered more in Week 3):
+**for loops over lists** — the most common pattern in data processing:
 
 ~~~python
-categories = ["Entrees", "Sides", "Drinks"]
+categories = ["Entrees", "Sides", "Drinks", "Appetizers"]
 
 for category in categories:
-    print(category)
+    print(f"Category: {category}")
 ~~~
 
-\`break\` exits a loop early. \`continue\` skips to the next iteration. Sweigart uses these in games and interactive programs — you'll use them in data validation.`,
+**break and continue** — Sweigart covers these as loop control:
+
+~~~python
+for price in [3.99, 5.99, 8.99, 12.99]:
+    if price > 10:
+        break           # stop the loop entirely
+    print(price)
+# Prints 3.99, 5.99, 8.99
+
+for price in [3.99, None, 8.99]:
+    if price is None:
+        continue        # skip this iteration, go to next
+    print(price)
+# Prints 3.99, 8.99
+~~~
+
+\`break\` exits the loop. \`continue\` skips to the next iteration. In data work, \`continue\` handles missing or invalid values cleanly without nested \`if\` blocks.`,
+      },
+      {
+        title: 'Putting It Together — A Mini Data Processor',
+        content: `Here's how this week's concepts combine into a real data-processing pattern. This is the shape of code you'll write again and again:
+
+~~~python
+# Menu items: (name, category, price, calories)
+menu_items = [
+    ("Orange Chicken",       "Entrees", 6.99, 490),
+    ("Fried Rice",           "Sides",   3.99, 520),
+    ("Chow Mein",            "Sides",   3.99, 510),
+    ("Honey Walnut Shrimp",  "Entrees", 8.99, 360),
+    ("Fountain Drink",       "Drinks",  2.49,   0),
+    ("Beijing Beef",         "Entrees", 6.99, 470),
+]
+
+# Filter: Entrees only, under 500 calories
+print("Entrees under 500 calories:")
+print(f"{'Name':<25} {'Price':>7} {'Cal':>5}")
+print("-" * 40)
+
+for name, category, price, calories in menu_items:
+    if category == "Entrees" and calories < 500:
+        print(f"{name:<25} \${price:>6.2f} {calories:>5}")
+~~~
+
+SQL equivalent:
+
+~~~sql
+SELECT name, price, calories
+FROM menu_items
+WHERE category = 'Entrees'
+  AND calories < 500;
+~~~
+
+Both produce the same result. The SQL version is shorter; the Python version gives you more control. This is the comparison you'll keep making throughout this course — SQL for retrieval and aggregation, Python for custom logic and output formatting.
+
+**Counting in a loop** — the Python equivalent of SQL's COUNT:
+
+~~~python
+total = 0
+entree_count = 0
+
+for name, category, price, calories in menu_items:
+    total += price               # running sum
+    if category == "Entrees":
+        entree_count += 1
+
+print(f"Total menu cost:  \${total:.2f}")
+print(f"Number of entrees: {entree_count}")
+~~~
+
+This is exactly what \`SUM(price)\` and \`COUNT(*) WHERE category = 'Entrees'\` do in SQL — just made explicit.`,
       },
     ],
   },
@@ -473,33 +906,63 @@ for category in categories:
     sql: [
       {
         title: 'Aggregate Functions',
-        content: `Iliev covers aggregates as the way to summarize data rather than retrieve individual rows. Instead of seeing every sale, you ask: how many? how much total? what's the average?
+        content: `Iliev covers aggregates as the way to summarize data rather than retrieve individual rows. Instead of seeing every sale, you ask: how many total? what's the sum? what's the average?
 
 ~~~sql
-SELECT COUNT(*) FROM sales;           -- total number of rows
+SELECT COUNT(*) FROM sales;           -- total rows (including NULLs)
 SELECT COUNT(notes) FROM sales;       -- rows where notes is NOT NULL
 SELECT SUM(revenue) FROM sales;       -- total of all revenue values
-SELECT AVG(revenue) FROM sales;       -- average revenue per row
+SELECT AVG(revenue) FROM sales;       -- mean revenue per row
 SELECT MIN(revenue) FROM sales;       -- smallest single value
 SELECT MAX(revenue) FROM sales;       -- largest single value
 ~~~
 
-Critical distinction Iliev makes: \`COUNT(*)\` counts all rows including those with NULLs. \`COUNT(column_name)\` counts only rows where that column has a value. If 10 orders have no notes, \`COUNT(*)\` includes them but \`COUNT(notes)\` doesn't. This difference produces different numbers and both are sometimes what you want.
+**The COUNT distinction** — Iliev emphasizes this: \`COUNT(*)\` counts all rows including NULLs. \`COUNT(column_name)\` counts only rows where that column has a value. If 10 of your 50 orders have no notes, \`COUNT(*)\` returns 50 and \`COUNT(notes)\` returns 40. Both numbers are valid — they answer different questions.
 
-Name your results with AS:
+Name your aggregates with AS:
 
 ~~~sql
 SELECT
-    COUNT(*)        AS total_orders,
-    SUM(revenue)    AS total_revenue,
-    AVG(revenue)    AS avg_order_value,
-    MAX(revenue)    AS largest_order
+    COUNT(*)          AS total_orders,
+    SUM(revenue)      AS total_revenue,
+    ROUND(AVG(revenue), 2) AS avg_order_value,
+    MAX(revenue)      AS largest_order,
+    MIN(revenue)      AS smallest_order
 FROM sales;
-~~~`,
+~~~
+
+**ROUND()** — takes two arguments: the value and the decimal places. \`ROUND(AVG(revenue), 2)\` gives you average revenue to the penny instead of 12 decimal places.
+
+**Aggregates with WHERE** — filter first, then aggregate:
+
+~~~sql
+-- Average revenue for completed orders only
+SELECT AVG(revenue) AS avg_completed_revenue
+FROM sales
+WHERE status = 'complete';
+~~~
+
+The WHERE clause runs before the aggregate. Only completed orders are counted. This is how you get meaningful business numbers — not "average of everything" but "average of what actually counts."
+
+**Multiple aggregates in one query** — the most common pattern in reporting:
+
+~~~sql
+SELECT
+    COUNT(*)                    AS total_orders,
+    COUNT(DISTINCT customer_id) AS unique_customers,
+    SUM(revenue)                AS gross_revenue,
+    ROUND(AVG(revenue), 2)      AS avg_ticket,
+    MAX(revenue)                AS max_order,
+    MIN(revenue)                AS min_order
+FROM sales
+WHERE sale_date >= '2024-01-01';
+~~~
+
+One query, one scan of the table, six different summary numbers. This is more efficient than running six separate queries.`,
       },
       {
         title: 'GROUP BY and HAVING',
-        content: `Iliev's book: GROUP BY groups rows that have the same values in specified columns into summary rows.
+        content: `Iliev: GROUP BY groups rows that share the same value in a column into summary rows — one row per group instead of one row per record.
 
 ~~~sql
 SELECT category, SUM(revenue) AS total_revenue
@@ -507,156 +970,244 @@ FROM sales
 GROUP BY category;
 ~~~
 
-One row per category, with the sum of revenue for that category. Mental model: GROUP BY sorts rows into piles by the grouped column, then runs the aggregate on each pile.
+Mental model: GROUP BY sorts all rows into piles by the grouped column, then runs the aggregate on each pile separately. One pile per category, SUM applied to each pile.
 
-You can group by multiple columns:
+**Multiple GROUP BY columns** — group by combinations:
 
 ~~~sql
-SELECT category, hour_of_day, SUM(revenue) AS revenue
+SELECT
+    category,
+    strftime('%Y-%m', sale_date)  AS month,
+    SUM(revenue)                  AS monthly_revenue,
+    COUNT(*)                      AS order_count
 FROM sales
-GROUP BY category, hour_of_day
-ORDER BY category, hour_of_day;
+GROUP BY category, month
+ORDER BY month, total_revenue DESC;
 ~~~
 
-**HAVING** filters groups AFTER aggregation. This is the distinction Iliev emphasizes — WHERE filters rows before grouping, HAVING filters groups after:
+One row per category-per-month. This is the shape of most real business reporting.
+
+**The rule for GROUP BY:** every column in SELECT must either be in GROUP BY or wrapped in an aggregate function. This is because after grouping, each group becomes one row — the database doesn't know which individual value to show for non-grouped, non-aggregated columns.
+
+**HAVING** — filters groups after aggregation. WHERE runs before grouping; HAVING runs after:
 
 ~~~sql
--- Find categories with more than $500 in total revenue
+-- Categories with more than $1,000 in total revenue
 SELECT category, SUM(revenue) AS total_revenue
 FROM sales
 GROUP BY category
-HAVING SUM(revenue) > 500;
+HAVING SUM(revenue) > 1000
+ORDER BY total_revenue DESC;
 ~~~
 
-The rule: if your condition references an aggregate function (SUM, COUNT, AVG...), use HAVING. Otherwise use WHERE. They can both appear in the same query:
+The rule: if your filter condition uses an aggregate function (SUM, COUNT, AVG...), it must go in HAVING. If it doesn't, it goes in WHERE.
+
+**Both in the same query:**
 
 ~~~sql
 SELECT category, COUNT(*) AS order_count
 FROM sales
-WHERE status = 'complete'         -- filters rows first
+WHERE status = 'complete'         -- ← filters rows BEFORE grouping
 GROUP BY category
-HAVING COUNT(*) > 10;             -- then filters groups
-~~~`,
+HAVING COUNT(*) >= 10             -- ← filters groups AFTER aggregation
+ORDER BY order_count DESC;
+~~~
+
+Read this as: "From completed orders only, group by category, then show only categories that have at least 10 orders, sorted from most to least."`,
       },
       {
-        title: 'ORDER BY with Aggregates',
-        content: `ORDER BY works on the results of aggregates too — sort by the calculated column:
+        title: 'ORDER BY with Aggregates and ROUND',
+        content: `Ordering aggregate results turns a table of numbers into a ranked answer:
 
 ~~~sql
--- Which hour of the day had the most revenue? Show highest first.
+-- Which category generates the most revenue?
 SELECT
-    strftime('%H', sale_time)  AS hour,
-    SUM(revenue)               AS hourly_revenue,
-    COUNT(*)                   AS order_count
+    category,
+    ROUND(SUM(revenue), 2)  AS total_revenue,
+    COUNT(*)                AS order_count,
+    ROUND(AVG(revenue), 2)  AS avg_order
 FROM sales
-GROUP BY hour
-ORDER BY hourly_revenue DESC;
+GROUP BY category
+ORDER BY total_revenue DESC;
 ~~~
 
-You can ORDER BY a column alias (the name you gave it with AS) in most databases including SQLite.
+You can ORDER BY a column alias (the name you gave it with AS) in SQLite.
 
-The full clause order that SQL expects:
+**The full clause order SQL expects:**
 
 ~~~
+SELECT    ← what to show
+FROM      ← which table
+WHERE     ← filter rows (before grouping)
+GROUP BY  ← group them
+HAVING    ← filter groups (after grouping)
+ORDER BY  ← sort results
+LIMIT     ← cap count
+~~~
+
+**Practical reporting query** — a weekly sales summary:
+
+~~~sql
 SELECT
-FROM
-WHERE        ← filters rows
-GROUP BY     ← groups them
-HAVING       ← filters groups
-ORDER BY     ← sorts results
-LIMIT        ← caps results
+    strftime('%w', sale_date)     AS day_of_week,   -- 0=Sunday, 6=Saturday
+    COUNT(*)                      AS total_orders,
+    ROUND(SUM(revenue), 2)        AS total_revenue,
+    ROUND(AVG(revenue), 2)        AS avg_order_value,
+    COUNT(DISTINCT customer_id)   AS unique_customers
+FROM sales
+WHERE sale_date >= date('now', '-7 days')
+GROUP BY day_of_week
+ORDER BY total_revenue DESC;
 ~~~
 
-Iliev's book notes that understanding this order matters because SQL evaluates them in this sequence internally — even though you write SELECT first, the database processes FROM and WHERE before it knows what to show you.`,
+\`strftime()\` is SQLite's date formatting function. \`'%w'\` extracts the day of week as a number. \`date('now', '-7 days')\` means "today minus 7 days" — a rolling window.
+
+This single query gives a Panda Express manager everything they need to staff the week: which day is busiest, average ticket, how many unique customers. That's the power of aggregates.`,
+      },
+      {
+        title: 'CASE Inside Aggregates',
+        content: `Combining CASE with aggregate functions creates conditional counts and sums — one of the most powerful SQL patterns. Iliev covers CASE in more depth in Week 5, but the aggregate version is worth introducing now.
+
+**Conditional COUNT** — count rows that meet a condition:
+
+~~~sql
+SELECT
+    COUNT(*) AS total_items,
+    SUM(CASE WHEN category = 'Entrees' THEN 1 ELSE 0 END) AS entree_count,
+    SUM(CASE WHEN price > 7 THEN 1 ELSE 0 END)            AS premium_count,
+    SUM(CASE WHEN calories < 400 THEN 1 ELSE 0 END)        AS low_cal_count
+FROM menu_items;
+~~~
+
+Each \`SUM(CASE WHEN ... THEN 1 ELSE 0 END)\` counts rows where the condition is true. This is more concise than running separate queries with WHERE.
+
+**Conditional SUM** — sum only values that meet a condition:
+
+~~~sql
+SELECT
+    SUM(revenue)                                            AS total_revenue,
+    SUM(CASE WHEN category = 'Entrees' THEN revenue END)   AS entree_revenue,
+    SUM(CASE WHEN category = 'Sides'   THEN revenue END)   AS sides_revenue
+FROM sales;
+~~~
+
+When CASE has no ELSE clause, unmatched rows return NULL. \`SUM()\` ignores NULLs, so only matching rows contribute to the total.
+
+**Percentage breakdown in one query:**
+
+~~~sql
+SELECT
+    ROUND(100.0 * SUM(CASE WHEN category = 'Entrees' THEN revenue ELSE 0 END)
+          / SUM(revenue), 1) AS entree_pct,
+    ROUND(100.0 * SUM(CASE WHEN category = 'Sides' THEN revenue ELSE 0 END)
+          / SUM(revenue), 1) AS sides_pct
+FROM sales;
+~~~
+
+The \`100.0 *\` forces floating-point division. This pattern appears in virtually every business intelligence report — it's how dashboards calculate "what percentage of revenue came from X."`,
       },
     ],
     python: [
       {
         title: 'Functions — def, parameters, return',
-        content: `Sweigart Chapter 3: "A function is like a miniprogram within a program."
+        content: `Sweigart Chapter 3: "A function is like a miniprogram within a program. A major purpose of functions is to group code that gets executed multiple times."
 
-His first example:
-
-~~~python
-def hello():
-    print('Howdy!')
-    print('Howdy!!!')
-    print('Hello there.')
-
-hello()
-hello()
-hello()
-~~~
-
-"A major purpose of functions is to group code that gets executed multiple times. Without a function defined, you would have to copy and paste this code each time." That's the point — write once, use many times.
-
-**Parameters** are the inputs a function accepts. **Arguments** are the values you pass when calling it:
+Without functions, you copy and paste. With functions, you write once and call many times:
 
 ~~~python
 def greet_item(item_name, price):
-    print(f"{item_name} is available for \${price:.2f}")
+    print(f"{item_name} costs \${price:.2f}")
 
 greet_item("Orange Chicken", 6.99)
 greet_item("Fried Rice", 3.99)
+greet_item("Chow Mein", 3.99)
 ~~~
+
+**Parameters** are the inputs listed in the \`def\`. **Arguments** are the values you pass when calling. In \`greet_item("Orange Chicken", 6.99)\`, the string and number are arguments that fill in \`item_name\` and \`price\`.
 
 **Return values** — Sweigart: "When creating a function using the def statement, you can specify what the return value should be with a return statement":
 
 ~~~python
-def calculate_tax(price, rate=0.08):
+def calculate_tax(price, rate=0.0875):
     return price * rate
 
-tax = calculate_tax(6.99)
-print(tax)   # 0.5592
+def total_with_tax(price):
+    return price + calculate_tax(price)
 
-# Default parameters: rate=0.08 is used if you don't pass one
-tax_ca = calculate_tax(6.99, 0.0725)
-~~~`,
+# Functions calling other functions
+receipt = total_with_tax(6.99)
+print(f"\${receipt:.2f}")   # $7.60
+~~~
+
+**Default parameters** — \`rate=0.0875\` is used if you don't pass a rate argument. Override by passing one explicitly: \`calculate_tax(6.99, 0.07)\`.
+
+**Multiple return values** — Python lets a function return a tuple:
+
+~~~python
+def analyze_price(price):
+    tier = "Premium" if price > 8 else "Standard" if price > 5 else "Budget"
+    tax  = round(price * 0.0875, 2)
+    total = round(price + tax, 2)
+    return tier, tax, total
+
+tier, tax, total = analyze_price(6.99)
+print(f"Tier: {tier}, Tax: \${tax}, Total: \${total}")
+~~~
+
+This is called "tuple unpacking" — Python fills in the three variables from the three returned values, in order.`,
       },
       {
-        title: 'Scope and the None Value',
-        content: `Sweigart covers two concepts in Chapter 3 that confuse beginners: scope and None.
+        title: 'Scope and Exception Handling',
+        content: `Sweigart Chapter 3 covers two concepts that confuse beginners: scope and error handling.
 
-**Scope** — variables created inside a function only exist inside that function:
+**Scope** — variables created inside a function only exist inside that function (local scope):
 
 ~~~python
 def make_report():
-    report_title = "Sales Summary"    # local variable
-    print(report_title)
+    title = "Sales Summary"    # local variable — only visible inside here
+    print(title)
 
 make_report()
-print(report_title)   # NameError — report_title doesn't exist here
+print(title)   # NameError: name 'title' is not defined
 ~~~
 
-Variables inside a function are "local." Variables outside are "global." Sweigart's rule: "If you need to modify a global variable from within a function, use the global keyword." But in practice, the cleaner approach is to pass values in as parameters and return values out.
+Variables outside functions are "global" — visible everywhere. Variables inside functions are "local" — visible only inside that function. The cleanest approach: pass values as parameters and return them. Avoid global variables except for true constants.
 
-**None** — Sweigart: "Functions that don't have a return statement return None." It represents the absence of a value:
-
-~~~python
-def say_hello():
-    print("Hello")
-    # no return statement
-
-result = say_hello()
-print(result)    # None
-
-# None is Python's equivalent of SQL's NULL
-# Check for it with: if result is None:
-~~~
-
-**Exception handling** from Sweigart Chapter 3:
+**Exception handling** with try/except — Sweigart Chapter 3:
 
 ~~~python
 def safe_divide(a, b):
     try:
         return a / b
     except ZeroDivisionError:
-        print("Error: cannot divide by zero")
+        print("Cannot divide by zero")
         return None
 
-print(safe_divide(10, 2))    # 5.0
-print(safe_divide(10, 0))    # Error message, then None
-~~~`,
+def safe_int(text):
+    try:
+        return int(text)
+    except ValueError:
+        print(f"'{text}' is not a valid number")
+        return None
+
+print(safe_divide(10, 2))     # 5.0
+print(safe_divide(10, 0))     # prints error, returns None
+print(safe_int("42"))         # 42
+print(safe_int("abc"))        # prints error, returns None
+~~~
+
+The pattern: \`try\` runs the risky code. \`except ExceptionType\` catches a specific error and handles it gracefully. The program continues instead of crashing.
+
+**None** — Sweigart: "Functions without a return statement return None." It represents the absence of a value:
+
+~~~python
+result = safe_divide(10, 0)
+if result is None:
+    print("Calculation failed — using default")
+    result = 0
+~~~
+
+Always use \`is None\` and \`is not None\` to check for None — not \`== None\`. This mirrors SQL's \`IS NULL\` and \`IS NOT NULL\` for the same reason.`,
       },
       {
         title: 'Lists',
@@ -666,12 +1217,13 @@ print(safe_divide(10, 0))    # Error message, then None
 menu_items = ['Orange Chicken', 'Fried Rice', 'Chow Mein', 'Broccoli Beef']
 ~~~
 
-**Indexing** — Sweigart: "The first value in the list is at index 0." Zero-based:
+**Indexing** — zero-based. First item is index 0:
 
 ~~~python
 menu_items[0]    # 'Orange Chicken'
 menu_items[1]    # 'Fried Rice'
-menu_items[-1]   # 'Broccoli Beef'  (negative indexes count from end)
+menu_items[-1]   # 'Broccoli Beef'   (negative counts from end)
+menu_items[-2]   # 'Chow Mein'
 ~~~
 
 **Slicing** \`[start:end]\` — returns a new list from start up to (not including) end:
@@ -680,20 +1232,99 @@ menu_items[-1]   # 'Broccoli Beef'  (negative indexes count from end)
 menu_items[1:3]   # ['Fried Rice', 'Chow Mein']
 menu_items[:2]    # ['Orange Chicken', 'Fried Rice']
 menu_items[2:]    # ['Chow Mein', 'Broccoli Beef']
+menu_items[:]     # copy of the entire list
 ~~~
 
-**List methods** Sweigart covers:
+**Essential list methods:**
 
 ~~~python
-menu_items.append('Honey Walnut Shrimp')  # adds to end
-menu_items.insert(1, 'Beijing Beef')      # inserts at position 1
-menu_items.remove('Chow Mein')            # removes first match
-menu_items.sort()                         # sorts in place (alphabetical)
-len(menu_items)                           # number of items
-'Fried Rice' in menu_items                # True — checks membership
+items = ['Orange Chicken', 'Fried Rice']
+
+items.append('Chow Mein')          # add to end
+items.insert(1, 'Beijing Beef')    # insert at index 1
+items.remove('Fried Rice')         # remove first occurrence
+items.pop()                        # remove and return last item
+items.pop(0)                       # remove and return item at index 0
+items.sort()                       # sort in place (alphabetical)
+items.sort(reverse=True)           # sort descending
+items.reverse()                    # reverse in place
+len(items)                         # count items
+'Fried Rice' in items              # True/False — membership check
+items.index('Chow Mein')           # position of item (raises ValueError if not found)
+items.count('Orange Chicken')      # how many times it appears
 ~~~
 
-SQL equivalent: a list is like a single-column table. \`len()\` is like \`COUNT(*)\`. \`in\` is like \`WHERE item IN (...)\`.`,
+**Iterating** — the most common list pattern:
+
+~~~python
+prices = [6.99, 3.99, 3.99, 8.99, 2.49]
+total = 0
+for price in prices:
+    total += price
+print(f"Total: \${total:.2f}")
+
+# Enumerate: gives both index and value
+for i, item in enumerate(menu_items):
+    print(f"{i+1}. {item}")
+~~~
+
+SQL connection: a list is like a single-column table. \`len()\` = \`COUNT(*)\`. \`in\` = \`WHERE x IN (...)\`. \`sort()\` = \`ORDER BY\`.`,
+      },
+      {
+        title: 'List Comprehensions',
+        content: `List comprehensions are Python's most powerful one-liner — Sweigart covers them as a compact way to build lists from other sequences. They replace 3-4 lines of for-loop code with one line:
+
+**Traditional loop approach:**
+
+~~~python
+prices = [6.99, 3.99, 3.99, 8.99, 2.49]
+
+# Get all prices above $5
+expensive = []
+for price in prices:
+    if price > 5:
+        expensive.append(price)
+~~~
+
+**List comprehension:**
+
+~~~python
+expensive = [price for price in prices if price > 5]
+# [6.99, 8.99]
+~~~
+
+Structure: \`[expression for item in iterable if condition]\`
+
+**More examples:**
+
+~~~python
+items = [("Orange Chicken", 6.99), ("Fried Rice", 3.99), ("Honey Walnut Shrimp", 8.99)]
+
+# All names
+names    = [name for name, price in items]
+
+# Names of items over $7
+premium  = [name for name, price in items if price > 7]
+
+# Prices with tax applied
+with_tax = [round(price * 1.0875, 2) for name, price in items]
+
+# Uppercase category names
+cats     = ["entrees", "sides", "drinks"]
+upper    = [c.upper() for c in cats]    # ['ENTREES', 'SIDES', 'DRINKS']
+~~~
+
+**Comprehensions for aggregation** — combined with \`sum()\` and \`len()\`:
+
+~~~python
+total    = sum(price for name, price in items)
+avg      = total / len(items)
+premium_count = sum(1 for name, price in items if price > 7)
+~~~
+
+\`sum(expression for item in iterable)\` is called a "generator expression" — it's like a list comprehension but more memory-efficient because it doesn't build the full list.
+
+SQL equivalent: SELECT with a WHERE clause + aggregation. In Python, comprehensions are the closest thing to SQL's inline filtering.`,
       },
     ],
   },
@@ -704,44 +1335,47 @@ SQL equivalent: a list is like a single-column table. \`len()\` is like \`COUNT(
     sql: [
       {
         title: 'Primary Keys and Foreign Keys',
-        content: `Iliev's book explains keys through the table creation syntax he uses throughout. A primary key uniquely identifies each row — no duplicates allowed:
+        content: `Iliev explains keys through the table creation syntax he uses throughout the book. A **primary key** uniquely identifies each row — the database enforces that no two rows can share the same value:
 
 ~~~sql
-CREATE TABLE customers
-(
-    id       INT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE customers (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
     name     VARCHAR(255) NOT NULL,
-    email    VARCHAR(255)
+    email    VARCHAR(255) UNIQUE,
+    phone    VARCHAR(20)
 );
 ~~~
 
-Iliev: "The primary key column is a unique identifier for our users. We want the id column to be unique, and also, whenever we add new users, we want the ID to autoincrement for each new user."
+Iliev: "The primary key column is a unique identifier for our users. We want the id column to be unique, and also, whenever we add new users, we want the ID to autoincrement for each new user." AUTOINCREMENT means the database assigns the next available ID — you don't supply it.
 
 A **foreign key** is a column in one table that references the primary key of another:
 
 ~~~sql
-CREATE TABLE orders
-(
-    id          INT PRIMARY KEY AUTO_INCREMENT,
-    customer_id INT,          -- this references customers.id
-    total       DECIMAL(8,2),
-    order_date  DATE
+CREATE TABLE orders (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL,    -- references customers.id
+    item_id     INTEGER NOT NULL,    -- references menu_items.id
+    quantity    INTEGER DEFAULT 1,
+    order_date  DATETIME,
+    total       DECIMAL(8,2)
 );
 ~~~
 
-The \`customer_id\` in the orders table "belongs to" the \`id\` column in the customers table. That relationship is the "relational" in relational database.
+\`customer_id\` in the orders table points to the \`id\` column in customers. That reference is the "relational" in relational database.
 
-Why separate the tables? Iliev's reasoning: instead of storing the customer's name and email in every single order row, you store it once in customers and reference it by ID. If a customer changes their email, you update one row — not thousands.`,
+**Why separate tables?** Iliev's reasoning: instead of storing the customer's name and email in every single order row, you store it once in customers and reference it by ID. If a customer changes their email, you update one row — not thousands of order rows. This is called **normalization** — eliminating data duplication.
+
+**The data integrity benefit:** a foreign key constraint (which SQLite supports but doesn't enforce by default) prevents orders from pointing to customers that don't exist. It's how databases stay consistent at scale.`,
       },
       {
         title: 'INNER JOIN',
-        content: `Iliev covers JOINs as the mechanism to combine data from related tables. INNER JOIN returns only rows where there's a match in both tables:
+        content: `Iliev covers JOINs as the mechanism to combine data from related tables. **INNER JOIN** returns only rows where there's a match in both tables:
 
 ~~~sql
 SELECT
-    c.name,
+    c.name          AS customer_name,
     c.email,
-    o.id        AS order_id,
+    o.id            AS order_id,
     o.total,
     o.order_date
 FROM customers c
@@ -749,14 +1383,31 @@ INNER JOIN orders o ON c.id = o.customer_id
 ORDER BY o.order_date DESC;
 ~~~
 
-The \`ON\` clause specifies the join condition — which columns connect the two tables. Always join on the primary key / foreign key pair.
+The \`ON\` clause specifies the join condition — which columns connect the tables. Always join on the primary key / foreign key pair. The \`c\` and \`o\` are **table aliases** — Iliev uses these to avoid writing the full table name repeatedly. \`customers c\` means "in this query, refer to the customers table as c."
 
-The \`c\` and \`o\` are table aliases — Iliev uses these to avoid writing the full table name repeatedly. \`customers c\` means "call the customers table 'c' in this query."
+What INNER JOIN excludes: any customer with no orders won't appear. Any order with no matching customer won't appear. It's the intersection of both tables — only rows with a match on both sides.
 
-What gets excluded: any customer with no orders won't appear. Any order with no matching customer won't appear. INNER JOIN is the intersection — only matched rows from both sides.
+**Three-table join** — join as many tables as you need:
 
 ~~~sql
--- Simpler: JOIN without INNER means the same thing in most databases
+SELECT
+    c.name          AS customer,
+    m.name          AS item,
+    o.quantity,
+    o.total,
+    o.order_date
+FROM orders o
+JOIN customers  c ON o.customer_id = c.id
+JOIN menu_items m ON o.item_id     = m.id
+ORDER BY o.order_date DESC
+LIMIT 10;
+~~~
+
+Each JOIN adds a new table. The ON clause specifies how it connects. This query bridges three tables — orders, customers, and menu_items — to show who ordered what.
+
+**JOIN without INNER** is the same as INNER JOIN — it's just shorter:
+
+~~~sql
 SELECT c.name, o.total
 FROM customers c
 JOIN orders o ON c.id = o.customer_id;
@@ -764,7 +1415,7 @@ JOIN orders o ON c.id = o.customer_id;
       },
       {
         title: 'LEFT JOIN — Keeping Unmatched Rows',
-        content: `LEFT JOIN keeps every row from the left table even when there's no match in the right. Unmatched right-side columns come back as NULL.
+        content: `**LEFT JOIN** keeps every row from the left table even when there's no match in the right table. Unmatched right-side columns come back as NULL.
 
 ~~~sql
 SELECT
@@ -776,9 +1427,9 @@ FROM customers c
 LEFT JOIN orders o ON c.id = o.customer_id;
 ~~~
 
-Customers who've never ordered appear with NULL in the order_id and total columns.
+Customers who've never placed an order appear in the results — with NULL in order_id and total. An INNER JOIN would silently drop them.
 
-**The classic pattern** — finding records with no match:
+**The classic "find no match" pattern:**
 
 ~~~sql
 -- Customers who have NEVER placed an order
@@ -788,9 +1439,67 @@ LEFT JOIN orders o ON c.id = o.customer_id
 WHERE o.id IS NULL;
 ~~~
 
-First the LEFT JOIN brings in all customers, putting NULL where no order exists. Then WHERE filters to only those NULLs. The result: customers with no order history.
+The LEFT JOIN brings in all customers, putting NULL where no order exists. WHERE then filters to only those NULL rows. Result: customers with zero order history — a list you'd use for a re-engagement campaign.
 
-Iliev's distinction: use INNER JOIN when you only want matched records. Use LEFT JOIN when you need all records from the primary table regardless of whether matches exist. In practice you'll reach for LEFT JOIN more often — it's less likely to silently drop data you need.`,
+**LEFT JOIN with aggregation** — how many orders per customer, including those with none:
+
+~~~sql
+SELECT
+    c.name,
+    COUNT(o.id)             AS order_count,
+    COALESCE(SUM(o.total), 0) AS lifetime_value
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+GROUP BY c.id, c.name
+ORDER BY lifetime_value DESC;
+~~~
+
+\`COUNT(o.id)\` counts only non-NULL order IDs — customers with no orders get 0. \`COALESCE(SUM(o.total), 0)\` turns NULL (no orders = NULL sum) into 0.
+
+Iliev's rule: use INNER JOIN when you only want matched records. Use LEFT JOIN when you need all records from the primary table regardless. In practice, LEFT JOIN appears more often — it's less likely to silently drop data you needed.`,
+      },
+      {
+        title: 'Joining and Aggregating Together',
+        content: `The real power emerges when you combine JOINs with GROUP BY and aggregates. This is the pattern behind virtually every business dashboard:
+
+~~~sql
+-- Revenue by category, last 30 days
+SELECT
+    m.category,
+    COUNT(o.id)                   AS orders,
+    SUM(o.quantity)               AS units_sold,
+    ROUND(SUM(o.total), 2)        AS total_revenue,
+    ROUND(AVG(o.total), 2)        AS avg_ticket
+FROM orders o
+JOIN menu_items m ON o.item_id = m.id
+WHERE o.order_date >= date('now', '-30 days')
+GROUP BY m.category
+ORDER BY total_revenue DESC;
+~~~
+
+This crosses orders and menu_items, filters to the last 30 days, groups by category, and aggregates. Five clauses, two tables, four metrics.
+
+**Alias everything** once queries get complex:
+
+~~~sql
+WITH recent_orders AS (
+    SELECT o.*, m.name AS item_name, m.category
+    FROM orders o
+    JOIN menu_items m ON o.item_id = m.id
+    WHERE o.order_date >= date('now', '-7 days')
+)
+SELECT
+    category,
+    COUNT(*)              AS order_count,
+    ROUND(SUM(total), 2)  AS revenue
+FROM recent_orders
+GROUP BY category
+ORDER BY revenue DESC;
+~~~
+
+The CTE (WITH clause) names the joined result so the main query stays readable. This is the professional pattern — break complex logic into named steps.
+
+**The mental model for multi-table queries:** first figure out which tables hold the data you need. Then figure out how they connect (foreign keys). Then write the JOIN. Then add WHERE, GROUP BY, aggregates. Build incrementally — don't try to write the final query first.`,
       },
     ],
     python: [
@@ -806,59 +1515,182 @@ menu_item = {
     'calories': 490
 }
 
+# Access by key
 menu_item['name']      # 'Orange Chicken'
 menu_item['price']     # 6.99
+
+# Add or update
+menu_item['in_stock'] = True         # add new key
+menu_item['price']    = 7.49         # update existing key
+
+# Delete
+del menu_item['calories']
 ~~~
 
-**vs. Lists** — Sweigart's contrast: "Unlike lists, items in dictionaries are unordered. While the order of items matters for lists, it does not matter what order the key-value pairs are typed in a dictionary."
-
-Dictionary methods Sweigart covers:
+**KeyError** — accessing a key that doesn't exist crashes with KeyError. Use \`.get()\` for safe access:
 
 ~~~python
-menu_item.keys()    # dict_keys(['name', 'category', 'price', 'calories'])
-menu_item.values()  # dict_values(['Orange Chicken', 'Entrees', 6.99, 490])
-menu_item.items()   # dict_items([('name', 'OC'), ('category', 'Entrees')...])
-
-# Safe lookup — returns default if key doesn't exist (won't crash)
-menu_item.get('allergens', 'not listed')   # 'not listed'
+menu_item['allergens']              # KeyError: 'allergens'
+menu_item.get('allergens')          # None  (no crash)
+menu_item.get('allergens', 'N/A')   # 'N/A' (default value)
 ~~~
 
-**KeyError** — Sweigart: "Trying to access a key that does not exist in a dictionary will result in a KeyError error message." Use \`.get()\` to avoid this.`,
+**Dictionary methods:**
+
+~~~python
+menu_item.keys()     # all keys as a view
+menu_item.values()   # all values as a view
+menu_item.items()    # all key-value pairs as tuples
+
+# Iterate over key-value pairs
+for key, value in menu_item.items():
+    print(f"{key}: {value}")
+
+# Check if key exists
+'price' in menu_item    # True
+'tax'   in menu_item    # False
+~~~
+
+Sweigart: "Unlike lists, items in dictionaries are unordered" (in Python 3.7+ they maintain insertion order, but you shouldn't rely on position).`,
       },
       {
-        title: 'Dictionaries as Data Structures',
-        content: `Sweigart Chapter 5 shows how dictionaries model real-world structured data. His tic-tac-toe example uses a dictionary to represent a board. The same idea applies to representing database rows:
+        title: 'Dictionaries as Tables — Simulating SQL',
+        content: `Sweigart Chapter 5 shows how dictionaries model real-world structured data. A list of dictionaries is Python's version of a database table:
 
 ~~~python
-# A list of dictionaries = a table
-orders = [
-    {'order_id': 101, 'customer': 'Justin', 'item': 'Orange Chicken', 'qty': 2},
-    {'order_id': 102, 'customer': 'Maria',  'item': 'Fried Rice',     'qty': 1},
-    {'order_id': 103, 'customer': 'Justin', 'item': 'Chow Mein',      'qty': 3},
+# Each dictionary = one row
+menu_items = [
+    {'id': 1, 'name': 'Orange Chicken',      'category': 'Entrees', 'price': 6.99},
+    {'id': 2, 'name': 'Fried Rice',          'category': 'Sides',   'price': 3.99},
+    {'id': 3, 'name': 'Honey Walnut Shrimp', 'category': 'Entrees', 'price': 8.99},
+    {'id': 4, 'name': 'Fountain Drink',      'category': 'Drinks',  'price': 2.49},
 ]
 
-# Iterate and access like SQL rows
-for order in orders:
-    print(f"Order {order['order_id']}: {order['customer']} ordered {order['qty']}x {order['item']}")
+# SQL: SELECT * FROM menu_items WHERE category = 'Entrees'
+entrees = [item for item in menu_items if item['category'] == 'Entrees']
+
+# SQL: SELECT SUM(price) FROM menu_items
+total = sum(item['price'] for item in menu_items)
+
+# SQL: ORDER BY price DESC LIMIT 3
+top3 = sorted(menu_items, key=lambda x: x['price'], reverse=True)[:3]
 ~~~
 
-**Nested dictionaries** — Sweigart's "structuring data" section shows dictionaries containing dictionaries:
+**Simulating a JOIN with nested lookup:**
 
 ~~~python
-customers = {
-    1: {'name': 'Justin', 'email': 'j@example.com'},
-    2: {'name': 'Maria',  'email': 'm@example.com'},
-}
+customers = {1: {'name': 'Justin'}, 2: {'name': 'Maria'}}
+orders    = [
+    {'order_id': 101, 'customer_id': 1, 'item': 'Orange Chicken', 'total': 13.98},
+    {'order_id': 102, 'customer_id': 2, 'item': 'Fried Rice',     'total':  3.99},
+    {'order_id': 103, 'customer_id': 1, 'item': 'Chow Mein',      'total':  7.98},
+]
 
-# Simulating a JOIN — look up customer by foreign key
+# SQL: SELECT c.name, o.item, o.total FROM orders o JOIN customers c ON ...
 for order in orders:
-    cid = order.get('customer_id')
-    customer = customers.get(cid, {})
-    name = customer.get('name', 'Unknown')
-    print(f"Order for: {name}")
+    customer = customers.get(order['customer_id'], {'name': 'Unknown'})
+    print(f"{customer['name']:<10} | {order['item']:<20} | \${order['total']:.2f}")
 ~~~
 
-This is exactly what SQL's JOIN does — Python just makes the mechanism visible instead of hiding it.`,
+This is exactly what SQL's JOIN does — Python just makes the lookup mechanism visible instead of hiding it inside the database engine.`,
+      },
+      {
+        title: 'Dictionary Comprehensions and Grouping',
+        content: `Just as list comprehensions build lists in one line, **dictionary comprehensions** build dictionaries:
+
+~~~python
+items = [("Orange Chicken", 6.99), ("Fried Rice", 3.99), ("Chow Mein", 3.99)]
+
+# Build a dict: name → price
+price_lookup = {name: price for name, price in items}
+# {'Orange Chicken': 6.99, 'Fried Rice': 3.99, 'Chow Mein': 3.99}
+
+# Build a dict: name → price with tax
+with_tax = {name: round(price * 1.0875, 2) for name, price in items}
+
+# Filter: only items over $5
+expensive = {name: price for name, price in items if price > 5}
+~~~
+
+**Grouping with dictionaries** — the Python equivalent of GROUP BY:
+
+~~~python
+menu_items = [
+    {'name': 'Orange Chicken', 'category': 'Entrees', 'price': 6.99},
+    {'name': 'Fried Rice',     'category': 'Sides',   'price': 3.99},
+    {'name': 'Chow Mein',      'category': 'Sides',   'price': 3.99},
+    {'name': 'Honey Walnut',   'category': 'Entrees', 'price': 8.99},
+]
+
+# Group items by category — SQL: GROUP BY category
+by_category = {}
+for item in menu_items:
+    cat = item['category']
+    if cat not in by_category:
+        by_category[cat] = []
+    by_category[cat].append(item)
+
+# Aggregate: count and total per category
+for cat, items in by_category.items():
+    count = len(items)
+    total = sum(i['price'] for i in items)
+    print(f"{cat:<10}: {count} items, \${total:.2f} total")
+~~~
+
+This "group by dictionary" pattern is the manual version of what pandas' \`.groupby()\` does automatically (Week 7). Understanding it manually first makes the pandas shortcut intuitive rather than magical.`,
+      },
+      {
+        title: 'Reading Data with sqlite3',
+        content: `Python's built-in \`sqlite3\` module connects to SQLite databases and runs SQL queries — bridging everything you've learned in both tracks.
+
+~~~python
+import sqlite3
+
+# Connect and query
+conn   = sqlite3.connect('week4_menu.db')
+cursor = conn.cursor()
+
+cursor.execute("SELECT name, category, price FROM menu_items ORDER BY price DESC")
+rows = cursor.fetchall()
+
+for row in rows:
+    name, category, price = row    # unpack the tuple
+    print(f"{name:<25} {category:<10} \${price:.2f}")
+
+conn.close()
+~~~
+
+**fetchall()** returns all rows as a list of tuples. **fetchone()** returns just the next row. **fetchmany(n)** returns at most n rows.
+
+**Parameterized queries** — the safe way to pass values into SQL. Never use string concatenation to build queries (SQL injection risk):
+
+~~~python
+category = "Entrees"
+
+# WRONG — vulnerable to SQL injection
+cursor.execute(f"SELECT * FROM menu_items WHERE category = '{category}'")
+
+# CORRECT — use ? placeholder
+cursor.execute("SELECT * FROM menu_items WHERE category = ?", (category,))
+rows = cursor.fetchall()
+~~~
+
+The \`?\` placeholder is filled in safely by the library. The second argument is a tuple — hence the trailing comma for a single value: \`(category,)\`.
+
+**Getting column names:**
+
+~~~python
+cursor.execute("SELECT name, price FROM menu_items")
+columns = [desc[0] for desc in cursor.description]   # ['name', 'price']
+rows    = cursor.fetchall()
+
+# Convert to list of dicts — much nicer to work with
+data = [dict(zip(columns, row)) for row in rows]
+for item in data:
+    print(item['name'], item['price'])
+~~~
+
+This is the pattern pandas uses internally when you call \`pd.read_sql()\`. Understanding it manually makes the library feel less like magic.`,
       },
     ],
   },

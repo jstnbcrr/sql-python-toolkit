@@ -294,7 +294,16 @@ Keep it tight. This is a teaching moment, not a lecture.`;
 
 // ─── Serve React frontend in production ──────────────────────────────────────
 // COEP/COOP headers are required for SharedArrayBuffer (sql.js + Pyodide WASM)
+const fs = require('fs');
 const distPath = path.resolve(__dirname, '..', 'dist');
+
+// Diagnostic: visit /api/health to confirm build artifacts exist
+app.get('/api/health', (req, res) => {
+  const distExists = fs.existsSync(distPath);
+  const indexExists = fs.existsSync(path.join(distPath, 'index.html'));
+  const contents = distExists ? fs.readdirSync(distPath) : [];
+  res.json({ distPath, distExists, indexExists, contents });
+});
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');

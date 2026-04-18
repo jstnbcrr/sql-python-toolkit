@@ -3,6 +3,63 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
+const { Pool } = require('pg');
+
+// ─── PostgreSQL ───────────────────────────────────────────────────────────────
+const db = new Pool({
+  host:     process.env.PG_HOST,
+  port:     parseInt(process.env.PG_PORT || '5432'),
+  database: process.env.PG_DATABASE,
+  user:     process.env.PG_USER,
+  password: process.env.PG_PASSWORD,
+  ssl:      false,
+});
+
+async function initDB() {
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS contacts (
+        id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        company VARCHAR(255),
+        role VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(255),
+        status VARCHAR(50) DEFAULT 'networking',
+        notes TEXT,
+        follow_up_date DATE,
+        last_contacted DATE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS reminders (
+        id VARCHAR(50) PRIMARY KEY,
+        message TEXT NOT NULL,
+        fire_at TIMESTAMP NOT NULL,
+        sent BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS stella_memory (
+        key VARCHAR(255) PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS stella_history (
+        id SERIAL PRIMARY KEY,
+        role VARCHAR(20) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✓ Database ready');
+
+    // Load conversation history into memory
+    const { rows } = await db.query('SELECT role, content FROM stella_history ORDER BY created_at DESC LIMIT 30');
+    stellaHistory.push(...rows.reverse().map(r => ({ role: r.role, content: r.content })));
+    console.log(`✓ Loaded ${stellaHistory.length} history messages`);
+  } catch (err) {
+    console.error('✗ Database error:', err.message);
+  }
+}
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -300,74 +357,70 @@ Keep it tight. This is a teaching moment, not a lecture.`;
   }
 });
 
-// ─── Server-side CRM ─────────────────────────────────────────────────────────
-const DATA_DIR = path.resolve(__dirname, 'data');
-const CRM_FILE = path.join(DATA_DIR, 'crm.json');
-const REMINDERS_FILE = path.join(DATA_DIR, 'reminders.json');
-
-function loadReminders() {
-  try {
-    if (fs.existsSync(REMINDERS_FILE)) return JSON.parse(fs.readFileSync(REMINDERS_FILE, 'utf8'));
-  } catch {}
-  return [];
-}
-
-function saveReminders(reminders) {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(REMINDERS_FILE, JSON.stringify(reminders, null, 2));
+// ─── Server-side CRM (database-backed) ───────────────────────────────────────
+function rowToContact(r) {
+  return {
+    id: r.id, name: r.name, company: r.company || '', role: r.role || '',
+    email: r.email || '', phone: r.phone || '', status: r.status || 'networking',
+    notes: r.notes || '',
+    followUpDate: r.follow_up_date ? new Date(r.follow_up_date).toISOString().split('T')[0] : '',
+    lastContacted: r.last_contacted ? new Date(r.last_contacted).toISOString().split('T')[0] : '',
+    createdAt: r.created_at ? r.created_at.toISOString() : new Date().toISOString(),
+  };
 }
 
 // Check every minute for due reminders
 setInterval(async () => {
-  const now = new Date();
-  const reminders = loadReminders();
-  const due = reminders.filter(r => !r.sent && new Date(r.fireAt) <= now);
-  if (!due.length) return;
-  for (const r of due) {
-    try {
+  try {
+    const { rows } = await db.query('SELECT * FROM reminders WHERE sent = FALSE AND fire_at <= NOW()');
+    for (const r of rows) {
       await sendTelegram(`⏰ Reminder: ${r.message}`);
-      r.sent = true;
-    } catch {}
+      await db.query('UPDATE reminders SET sent = TRUE WHERE id = $1', [r.id]);
+    }
+  } catch (err) {
+    console.error('Reminder check error:', err.message);
   }
-  saveReminders(reminders);
 }, 60000);
 
-function loadCRM() {
+app.get('/api/crm/contacts', async (req, res) => {
   try {
-    if (fs.existsSync(CRM_FILE)) return JSON.parse(fs.readFileSync(CRM_FILE, 'utf8'));
-  } catch {}
-  return { contacts: [] };
-}
-
-function saveCRM(data) {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(CRM_FILE, JSON.stringify(data, null, 2));
-}
-
-app.get('/api/crm/contacts', (req, res) => res.json(loadCRM().contacts));
-
-app.post('/api/crm/contacts', (req, res) => {
-  const crm = loadCRM();
-  const contact = { ...req.body, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), createdAt: new Date().toISOString() };
-  crm.contacts.push(contact);
-  saveCRM(crm);
-  res.json(contact);
+    const { rows } = await db.query('SELECT * FROM contacts ORDER BY created_at DESC');
+    res.json(rows.map(rowToContact));
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.put('/api/crm/contacts/:id', (req, res) => {
-  const crm = loadCRM();
-  const idx = crm.contacts.findIndex(c => c.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: 'not found' });
-  crm.contacts[idx] = { ...crm.contacts[idx], ...req.body };
-  saveCRM(crm);
-  res.json(crm.contacts[idx]);
+app.post('/api/crm/contacts', async (req, res) => {
+  const { name, company, role, email, phone, status, notes, followUpDate, lastContacted } = req.body;
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  try {
+    const { rows } = await db.query(
+      `INSERT INTO contacts (id, name, company, role, email, phone, status, notes, follow_up_date, last_contacted)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [id, name, company||'', role||'', email||'', phone||'', status||'networking', notes||'', followUpDate||null, lastContacted||null]
+    );
+    res.json(rowToContact(rows[0]));
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.delete('/api/crm/contacts/:id', (req, res) => {
-  const crm = loadCRM();
-  crm.contacts = crm.contacts.filter(c => c.id !== req.params.id);
-  saveCRM(crm);
-  res.json({ ok: true });
+app.put('/api/crm/contacts/:id', async (req, res) => {
+  const { name, company, role, email, phone, status, notes, followUpDate, lastContacted } = req.body;
+  try {
+    const { rows } = await db.query(
+      `UPDATE contacts SET name=COALESCE($2,name), company=COALESCE($3,company), role=COALESCE($4,role),
+       email=COALESCE($5,email), phone=COALESCE($6,phone), status=COALESCE($7,status),
+       notes=COALESCE($8,notes), follow_up_date=$9, last_contacted=$10 WHERE id=$1 RETURNING *`,
+      [req.params.id, name, company, role, email, phone, status, notes, followUpDate||null, lastContacted||null]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'not found' });
+    res.json(rowToContact(rows[0]));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/crm/contacts/:id', async (req, res) => {
+  try {
+    await db.query('DELETE FROM contacts WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ─── Telegram ────────────────────────────────────────────────────────────────
@@ -519,44 +572,47 @@ const STELLA_TOOLS = [
   },
 ];
 
-function executeTool(name, input) {
-  const crm = loadCRM();
+async function executeTool(name, input) {
   const today = new Date().toISOString().split('T')[0];
 
   if (name === 'get_contacts') {
-    return crm.contacts.length === 0 ? 'No contacts yet.' : JSON.stringify(crm.contacts);
+    const { rows } = await db.query('SELECT * FROM contacts ORDER BY created_at DESC');
+    return rows.length === 0 ? 'No contacts yet.' : JSON.stringify(rows.map(rowToContact));
   }
   if (name === 'get_due_followups') {
-    const due = crm.contacts.filter(c => c.followUpDate && c.followUpDate <= today);
-    return due.length === 0 ? 'No follow-ups due.' : JSON.stringify(due);
+    const { rows } = await db.query('SELECT * FROM contacts WHERE follow_up_date <= $1', [today]);
+    return rows.length === 0 ? 'No follow-ups due.' : JSON.stringify(rows.map(rowToContact));
   }
   if (name === 'add_contact') {
-    const contact = { ...input, id: Date.now().toString(36), createdAt: new Date().toISOString() };
-    crm.contacts.push(contact);
-    saveCRM(crm);
-    return `Added contact: ${contact.name}`;
+    const id = Date.now().toString(36);
+    await db.query(
+      `INSERT INTO contacts (id, name, company, role, email, phone, status, notes, follow_up_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [id, input.name, input.company||'', input.role||'', input.email||'', input.phone||'',
+       input.status||'networking', input.notes||'', input.followUpDate||null]
+    );
+    return `Added contact: ${input.name}`;
   }
   if (name === 'update_contact') {
-    const idx = crm.contacts.findIndex(c => c.id === input.id);
-    if (idx === -1) return 'Contact not found.';
-    crm.contacts[idx] = { ...crm.contacts[idx], ...input };
-    saveCRM(crm);
-    return `Updated ${crm.contacts[idx].name}`;
+    const { rows } = await db.query('SELECT * FROM contacts WHERE id = $1', [input.id]);
+    if (!rows.length) return 'Contact not found.';
+    await db.query(
+      `UPDATE contacts SET name=COALESCE($2,name), company=COALESCE($3,company), role=COALESCE($4,role),
+       status=COALESCE($5,status), notes=COALESCE($6,notes), follow_up_date=COALESCE($7,follow_up_date) WHERE id=$1`,
+      [input.id, input.name, input.company, input.role, input.status, input.notes, input.followUpDate||null]
+    );
+    return `Updated ${input.name || rows[0].name}`;
   }
   if (name === 'delete_contact') {
-    const before = crm.contacts.length;
-    crm.contacts = crm.contacts.filter(c => c.id !== input.id);
-    saveCRM(crm);
-    return crm.contacts.length < before ? 'Deleted.' : 'Contact not found.';
+    await db.query('DELETE FROM contacts WHERE id = $1', [input.id]);
+    return 'Deleted.';
   }
   if (name === 'set_reminder') {
     const dateStr = input.date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
     const fireAt = new Date(`${dateStr}T${input.time}:00-06:00`);
     if (isNaN(fireAt.getTime())) return 'Invalid time format.';
-    const reminder = { id: Date.now().toString(36), message: input.message, fireAt: fireAt.toISOString(), sent: false };
-    const reminders = loadReminders();
-    reminders.push(reminder);
-    saveReminders(reminders);
+    const id = Date.now().toString(36);
+    await db.query('INSERT INTO reminders (id, message, fire_at) VALUES ($1, $2, $3)', [id, input.message, fireAt]);
     return `Reminder set for ${fireAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Denver' })}: "${input.message}"`;
   }
   return 'Unknown tool.';
@@ -610,8 +666,12 @@ app.post('/api/telegram/webhook', async (req, res) => {
     return;
   }
 
+  const userContentStr = typeof userContent === 'string' ? userContent : JSON.stringify(userContent);
   stellaHistory.push({ role: 'user', content: userContent });
   if (stellaHistory.length > 30) stellaHistory.splice(0, 2);
+
+  // Persist user message
+  try { await db.query('INSERT INTO stella_history (role, content) VALUES ($1, $2)', ['user', userContentStr]); } catch {}
 
   try {
     let messages = [...stellaHistory];
@@ -634,9 +694,11 @@ app.post('/api/telegram/webhook', async (req, res) => {
 
       if (response.stop_reason === 'tool_use') {
         messages.push({ role: 'assistant', content: response.content });
-        const toolResults = response.content
-          .filter(b => b.type === 'tool_use')
-          .map(b => ({ type: 'tool_result', tool_use_id: b.id, content: executeTool(b.name, b.input) }));
+        const toolResults = await Promise.all(
+          response.content
+            .filter(b => b.type === 'tool_use')
+            .map(async b => ({ type: 'tool_result', tool_use_id: b.id, content: await executeTool(b.name, b.input) }))
+        );
         messages.push({ role: 'user', content: toolResults });
         continue;
       }
@@ -647,6 +709,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
 
     if (finalText) {
       stellaHistory.push({ role: 'assistant', content: finalText });
+      try { await db.query('INSERT INTO stella_history (role, content) VALUES ($1, $2)', ['assistant', finalText]); } catch {}
       await sendTelegram(finalText);
     }
   } catch (err) {
@@ -752,7 +815,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`\n🧠 Sage backend running on http://localhost:${PORT}`);
   console.log(`   API Key: ${process.env.ANTHROPIC_API_KEY ? '✓ loaded' : '✗ missing — set ANTHROPIC_API_KEY in .env'}\n`);
+  await initDB();
 });

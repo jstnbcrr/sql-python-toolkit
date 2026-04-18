@@ -78,6 +78,7 @@ const apiCors = cors({
     if (origin.startsWith('http://localhost:')) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     if (origin.endsWith('.onrender.com')) return callback(null, true);
+    if (origin.endsWith('.sg-host.com')) return callback(null, true);
     callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
@@ -381,6 +382,13 @@ setInterval(async () => {
     console.error('Reminder check error:', err.message);
   }
 }, 60000);
+
+app.get('/api/stella/memory', async (req, res) => {
+  try {
+    const { rows } = await db.query('SELECT key, value FROM stella_memory ORDER BY updated_at DESC');
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 app.get('/api/crm/contacts', async (req, res) => {
   try {

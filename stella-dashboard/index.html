@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stella</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #111118;
+      --bg3: #1a1a24;
+      --border: #2a2a3a;
+      --border2: #3a3a4a;
+      --text: #e8e8f0;
+      --muted: #6b6b8a;
+      --accent: #7c6fff;
+      --accent2: #ff6fb0;
+      --green: #4fffb0;
+      --yellow: #ffd166;
+      --red: #ff6b6b;
+      --blue: #6fbaff;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    h1, h2, h3 { font-weight: 700; }
+
+    .grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Header ── */
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 24px;
+    }
+
+    .stella-avatar {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      border: 3px solid var(--accent);
+      object-fit: cover;
+      cursor: pointer;
+      flex-shrink: 0;
+      background: var(--bg3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      overflow: hidden;
+    }
+
+    .stella-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .header-info h1 {
+      font-size: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-info p {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .header-info .age-badge {
+      display: inline-block;
+      background: var(--accent)/10;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-size: 11px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-top: 6px;
+      background: rgba(124, 111, 255, 0.1);
+    }
+
+    /* ── Tamagotchi stats ── */
+    .tama-card { grid-column: 1 / -1; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .stat-item { }
+
+    .stat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .stat-bar {
+      height: 8px;
+      background: var(--bg3);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .stat-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .stat-controls {
+      display: flex;
+      gap: 6px;
+    }
+
+    .stat-btn {
+      flex: 1;
+      padding: 4px;
+      font-size: 11px;
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .stat-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .mood-display {
+      text-align: center;
+      font-size: 48px;
+      margin: 12px 0;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .mood-text {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Chat ── */
+    .chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .chat-input:focus { border-color: var(--accent); }
+
+    .chat-messages {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-msg {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      max-width: 85%;
+    }
+
+    .chat-msg.user {
+      background: rgba(124, 111, 255, 0.15);
+      border: 1px solid rgba(124, 111, 255, 0.3);
+      align-self: flex-end;
+    }
+
+    .chat-msg.stella {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      align-self: flex-start;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover { opacity: 0.85; }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--muted);
+    }
+
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 11px;
+      border-radius: 8px;
+    }
+
+    /* ── Contacts ── */
+    .contact-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .contact-item:last-child { border-bottom: none; }
+
+    .contact-name { font-size: 14px; font-weight: 600; }
+    .contact-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .status-networking { color: var(--blue); border-color: var(--blue); background: rgba(111,186,255,0.08); }
+    .status-applied { color: var(--yellow); border-color: var(--yellow); background: rgba(255,209,102,0.08); }
+    .status-interviewing { color: var(--accent); border-color: var(--accent); background: rgba(124,111,255,0.08); }
+    .status-offer { color: var(--green); border-color: var(--green); background: rgba(79,255,176,0.08); }
+    .status-rejected { color: var(--red); border-color: var(--red); background: rgba(255,107,107,0.08); }
+    .status-closed { color: var(--muted); border-color: var(--muted); background: rgba(107,107,138,0.08); }
+
+    /* ── Memory ── */
+    .memory-item {
+      display: flex;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .memory-item:last-child { border-bottom: none; }
+    .memory-key { color: var(--accent); font-weight: 600; min-width: 120px; font-size: 11px; }
+    .memory-val { color: var(--text); }
+
+    /* ── Reminders ── */
+    .reminder-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .reminder-item:last-child { border-bottom: none; }
+    .reminder-time { color: var(--accent2); font-size: 11px; min-width: 80px; }
+    .reminder-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); flex-shrink: 0; }
+
+    /* ── Empty states ── */
+    .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 20px 0; }
+
+    /* ── Upload ── */
+    #photo-upload { display: none; }
+
+    .upload-hint {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="grid">
+
+  <!-- Header -->
+  <div class="card header">
+    <div class="stella-avatar" id="avatar" onclick="document.getElementById('photo-upload').click()" title="Click to change photo">
+      <img id="avatar-img" src="" alt="" style="display:none" />
+      <span id="avatar-emoji">🐾</span>
+    </div>
+    <input type="file" id="photo-upload" accept="image/*" onchange="uploadPhoto(event)" />
+    <div class="header-info">
+      <h1>Stella</h1>
+      <p>Black Border Collie · Your personal assistant</p>
+      <span class="age-badge" id="age-badge">Loading...</span>
+      <div class="upload-hint">Click photo to change</div>
+    </div>
+  </div>
+
+  <!-- Tamagotchi -->
+  <div class="card tama-card">
+    <div class="card-title">Stella's Status</div>
+    <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+      <div style="flex:0 0 120px; text-align:center;">
+        <div class="mood-display" id="mood-emoji">🐶</div>
+        <div class="mood-text" id="mood-text">Doing great!</div>
+      </div>
+      <div class="stats-grid" style="flex:1;">
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">🍖 Fed</span>
+            <span class="stat-value" id="val-hunger">80%</span>
+          </div>
+          <div class="stat-bar"><div class="stat-fill" id="bar-hunger" style="background:var(--yellow);width:80%"></div></div>
+          <div class="stat-controls">
+            <button class="stat-btn" onclick="adjustStat('hunger', 10)">Feed</button>
+            <button class="stat-btn" onclick="adjustStat('hunger', -10)">−</button>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">💝 Love</span>
+            <span class="stat-value" id="val-love">90%</span>
+          </div>
+          <div class="stat-bar"><div class="stat-fill" id="bar-love" style="background:var(--accent2);width:90%"></div></div>
+          <div class="stat-controls">
+            <button class="stat-btn" onclick="adjustStat('love', 10)">Pet</button>
+            <button class="stat-btn" onclick="adjustStat('love', -10)">−</button>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">⚡ Energy</span>
+            <span class="stat-value" id="val-energy">70%</span>
+          </div>
+          <div class="stat-bar"><div class="stat-fill" id="bar-energy" style="background:var(--green);width:70%"></div></div>
+          <div class="stat-controls">
+            <button class="stat-btn" onclick="adjustStat('energy', 10)">Rest</button>
+            <button class="stat-btn" onclick="adjustStat('energy', -10)">Play</button>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-header">
+            <span class="stat-label">🧠 Brain</span>
+            <span class="stat-value" id="val-brain">95%</span>
+          </div>
+          <div class="stat-bar"><div class="stat-fill" id="bar-brain" style="background:var(--accent);width:95%"></div></div>
+          <div class="stat-controls">
+            <button class="stat-btn" onclick="adjustStat('brain', 10)">Train</button>
+            <button class="stat-btn" onclick="adjustStat('brain', -10)">−</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <div class="card-title">Message Stella</div>
+    <div class="chat-messages" id="chat-messages"></div>
+    <div class="chat-input-row">
+      <input type="text" class="chat-input" id="chat-input" placeholder="Talk to Stella..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- Contacts -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>CRM Contacts</span>
+      <span id="contact-count" style="color:var(--accent);font-size:12px;"></span>
+    </div>
+    <div id="contacts-list"><div class="empty">Loading...</div></div>
+  </div>
+
+  <!-- Reminders -->
+  <div class="card">
+    <div class="card-title">Upcoming Reminders</div>
+    <div id="reminders-list"><div class="empty">Loading...</div></div>
+  </div>
+
+  <!-- Memory -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <div class="card-title">What Stella Knows About You</div>
+    <div id="memory-list"><div class="empty">Loading...</div></div>
+  </div>
+
+</div>
+
+<script>
+  const API = 'https://sql-python-toolkit.onrender.com';
+
+  // ── Age calculator ──
+  function calcAge() {
+    const born = new Date('2025-08-22');
+    const now = new Date();
+    const months = Math.floor((now - born) / (1000 * 60 * 60 * 24 * 30.44));
+    document.getElementById('age-badge').textContent = `${months} months old · Born Aug 22, 2025`;
+  }
+
+  // ── Photo ──
+  function uploadPhoto(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      localStorage.setItem('stella-photo', ev.target.result);
+      applyPhoto(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function applyPhoto(src) {
+    const img = document.getElementById('avatar-img');
+    const emoji = document.getElementById('avatar-emoji');
+    img.src = src;
+    img.style.display = 'block';
+    emoji.style.display = 'none';
+  }
+
+  // ── Tamagotchi stats ──
+  const STAT_KEYS = ['hunger', 'love', 'energy', 'brain'];
+  let stats = JSON.parse(localStorage.getItem('stella-stats') || '{"hunger":80,"love":90,"energy":70,"brain":95}');
+
+  function saveStats() { localStorage.setItem('stella-stats', JSON.stringify(stats)); }
+
+  function adjustStat(key, delta) {
+    stats[key] = Math.max(0, Math.min(100, (stats[key] || 50) + delta));
+    saveStats();
+    renderStats();
+  }
+
+  function renderStats() {
+    STAT_KEYS.forEach(k => {
+      const v = stats[k] || 0;
+      document.getElementById(`val-${k}`).textContent = v + '%';
+      document.getElementById(`bar-${k}`).style.width = v + '%';
+    });
+    updateMood();
+  }
+
+  function updateMood() {
+    const avg = STAT_KEYS.reduce((s, k) => s + (stats[k] || 0), 0) / STAT_KEYS.length;
+    const el = document.getElementById('mood-emoji');
+    const txt = document.getElementById('mood-text');
+    if (avg >= 80) { el.textContent = '🐶'; txt.textContent = 'Thriving and happy!'; }
+    else if (avg >= 60) { el.textContent = '😊'; txt.textContent = 'Doing pretty good'; }
+    else if (avg >= 40) { el.textContent = '😐'; txt.textContent = 'Could use some love'; }
+    else if (avg >= 20) { el.textContent = '😢'; txt.textContent = 'Not feeling great...'; }
+    else { el.textContent = '😞'; txt.textContent = 'Needs attention!'; }
+  }
+
+  // ── Chat ──
+  const chatHistory = JSON.parse(localStorage.getItem('stella-chat') || '[]');
+
+  function renderChat() {
+    const box = document.getElementById('chat-messages');
+    box.innerHTML = chatHistory.slice(-20).map(m =>
+      `<div class="chat-msg ${m.role}">${m.content}</div>`
+    ).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    chatHistory.push({ role: 'user', content: text });
+    localStorage.setItem('stella-chat', JSON.stringify(chatHistory));
+    renderChat();
+
+    try {
+      const res = await fetch(`${API}/api/telegram/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: `[Dashboard] ${text}` }),
+      });
+      if (res.ok) {
+        chatHistory.push({ role: 'stella', content: '✓ Sent to Stella on Telegram!' });
+      } else {
+        chatHistory.push({ role: 'stella', content: '✗ Could not reach Stella' });
+      }
+    } catch {
+      chatHistory.push({ role: 'stella', content: '✗ Could not reach Stella' });
+    }
+
+    localStorage.setItem('stella-chat', JSON.stringify(chatHistory));
+    renderChat();
+  }
+
+  // ── Contacts ──
+  async function loadContacts() {
+    try {
+      const res = await fetch(`${API}/api/crm/contacts`);
+      const contacts = await res.json();
+      const el = document.getElementById('contacts-list');
+      document.getElementById('contact-count').textContent = contacts.length + ' contacts';
+      if (!contacts.length) { el.innerHTML = '<div class="empty">No contacts yet</div>'; return; }
+      el.innerHTML = contacts.slice(0, 8).map(c => `
+        <div class="contact-item">
+          <div>
+            <div class="contact-name">${c.name}</div>
+            <div class="contact-sub">${[c.role, c.company].filter(Boolean).join(' @ ') || '—'}</div>
+            ${c.followUpDate ? `<div class="contact-sub">Follow-up: ${c.followUpDate}</div>` : ''}
+          </div>
+          <span class="status-badge status-${c.status}">${c.status}</span>
+        </div>
+      `).join('');
+    } catch {
+      document.getElementById('contacts-list').innerHTML = '<div class="empty">Could not load</div>';
+    }
+  }
+
+  // ── Reminders ──
+  async function loadReminders() {
+    // No dedicated API endpoint yet — show placeholder
+    document.getElementById('reminders-list').innerHTML = '<div class="empty">Text Stella to set reminders</div>';
+  }
+
+  // ── Memory ──
+  async function loadMemory() {
+    try {
+      const res = await fetch(`${API}/api/stella/memory`);
+      if (!res.ok) throw new Error();
+      const memory = await res.json();
+      const el = document.getElementById('memory-list');
+      if (!memory.length) { el.innerHTML = '<div class="empty">Tell Stella things to remember</div>'; return; }
+      el.innerHTML = memory.map(m => `
+        <div class="memory-item">
+          <span class="memory-key">${m.key}</span>
+          <span class="memory-val">${m.value}</span>
+        </div>
+      `).join('');
+    } catch {
+      document.getElementById('memory-list').innerHTML = '<div class="empty">Tell Stella "remember that..." to save facts</div>';
+    }
+  }
+
+  // ── Init ──
+  calcAge();
+  renderStats();
+  renderChat();
+  loadContacts();
+  loadReminders();
+  loadMemory();
+
+  const savedPhoto = localStorage.getItem('stella-photo');
+  if (savedPhoto) applyPhoto(savedPhoto);
+
+  // Refresh data every 30s
+  setInterval(() => { loadContacts(); loadMemory(); }, 30000);
+</script>
+</body>
+</html>

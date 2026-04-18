@@ -30,7 +30,8 @@ app.use(express.json({ limit: '2mb' }));
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const MODEL = 'claude-sonnet-4-5';
+const MODEL = 'claude-sonnet-4-6';
+const STELLA_MODEL = 'claude-haiku-4-5-20251001';
 
 // ─── Sage Chat (SSE Streaming) ───────────────────────────────────────────────
 app.post('/api/sage/chat', async (req, res) => {
@@ -349,7 +350,7 @@ function sendTelegram(text) {
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return Promise.reject(new Error('Telegram not configured'));
 
-  const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' });
+  const body = JSON.stringify({ chat_id: chatId, text });
   return new Promise((resolve, reject) => {
     const req = https.request({
       hostname: 'api.telegram.org',
@@ -545,7 +546,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
     // Agentic loop — let Stella use tools if needed
     for (let i = 0; i < 5; i++) {
       const response = await client.messages.create({
-        model: MODEL,
+        model: STELLA_MODEL,
         max_tokens: 1024,
         system: stellaSystem(),
         messages,

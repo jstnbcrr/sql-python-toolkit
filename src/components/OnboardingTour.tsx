@@ -39,6 +39,12 @@ const STEPS: TourStep[] = [
     body: 'The editor runs SQL (via SQLite in the browser) and Python (via Pyodide). No setup needed — write, run, and get instant feedback.',
   },
   {
+    icon: '🛠',
+    iconBg: '#FFB347',
+    title: 'Mini-Projects: Real Work, Not Exercises',
+    body: "Some weeks unlock a Mini-Project — a task framed as a real Slack message from your manager. You plan it, build SQL + Python solutions, test your work, then submit for Sage to grade on correctness, readability, efficiency, and how well you explained your decisions. It's the closest thing to an actual job ticket.",
+  },
+  {
     icon: '✦',
     iconBg: '#00D4FF',
     title: 'Your Always-On Mentor',
@@ -58,6 +64,7 @@ const STEP_LABELS = [
   'Dashboard',
   'Lessons',
   'Editor',
+  'Projects',
   'Sage AI',
   "You're set!",
 ]

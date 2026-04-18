@@ -27,7 +27,14 @@
       "Bash(grep -v '\\\\\\\\\\\\\\\\${')",
       "Bash(lsof -iTCP -sTCP:LISTEN)",
       "Read(//Users/justin/DATA WAREHOUSE TOOL KIT/**)",
-      "Bash(npm start:*)"
+      "Bash(npm start:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(curl -s http://localhost:3002/api/sage-test)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\({ path: '.env' }\\); console.log\\('KEY:', process.env.ANTHROPIC_API_KEY ? 'loaded \\(' + process.env.ANTHROPIC_API_KEY.slice\\(0,15\\) + '...\\)' : 'MISSING'\\)\")",
+      "Bash(node -e \"const r = require\\('dotenv'\\).config\\({ path: require\\('path'\\).resolve\\(__dirname || '.', '.env'\\) }\\); console.log\\(r\\); console.log\\('KEY:', process.env.ANTHROPIC_API_KEY?.slice\\(0,15\\)\\)\")",
+      "Bash(curl -s -X POST http://localhost:3002/api/sage/chat -H 'Content-Type: application/json' -d '{\"messages\":[{\"role\":\"user\",\"content\":\"What is a primary key?\"}],\"systemPrompt\":\"You are Sage, a senior data engineer teaching SQL and Python. Week 1, Phase 1.\"}' --no-buffer)",
+      "Bash(xargs kill:*)",
+      "Bash(curl -s \"https://api.telegram.org/bot8627194841:AAH2qbtnUxsxwbL9gn2Mx-rhzUyOALPmQeY/getUpdates\")"
     ]
   }
 }

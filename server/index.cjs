@@ -11,14 +11,14 @@ const PORT = process.env.PORT || 3002;
 // Vite generates <script type="module" crossorigin> which sends an Origin header
 // even for same-origin requests; applying CORS globally blocked those with a 500.
 const allowedOrigins = [
-  'http://localhost:5174',
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 const apiCors = cors({
   origin: (origin, callback) => {
-    // Allow: no origin (curl/health checks), localhost dev, configured FRONTEND_URL,
-    // and any *.onrender.com URL (same-service — same-origin POST includes Origin header)
+    // Allow: no origin (curl/health checks), any localhost port (dev),
+    // configured FRONTEND_URL, and any *.onrender.com URL
     if (!origin) return callback(null, true);
+    if (origin.startsWith('http://localhost:')) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     if (origin.endsWith('.onrender.com')) return callback(null, true);
     callback(new Error(`CORS blocked: ${origin}`));
@@ -294,6 +294,302 @@ Keep it tight. This is a teaching moment, not a lecture.`;
       messages: [{ role: 'user', content: prompt }],
     });
     res.json({ mirror: message.content[0].text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Server-side CRM ─────────────────────────────────────────────────────────
+const DATA_DIR = path.resolve(__dirname, 'data');
+const CRM_FILE = path.join(DATA_DIR, 'crm.json');
+
+function loadCRM() {
+  try {
+    if (fs.existsSync(CRM_FILE)) return JSON.parse(fs.readFileSync(CRM_FILE, 'utf8'));
+  } catch {}
+  return { contacts: [] };
+}
+
+function saveCRM(data) {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(CRM_FILE, JSON.stringify(data, null, 2));
+}
+
+app.get('/api/crm/contacts', (req, res) => res.json(loadCRM().contacts));
+
+app.post('/api/crm/contacts', (req, res) => {
+  const crm = loadCRM();
+  const contact = { ...req.body, id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), createdAt: new Date().toISOString() };
+  crm.contacts.push(contact);
+  saveCRM(crm);
+  res.json(contact);
+});
+
+app.put('/api/crm/contacts/:id', (req, res) => {
+  const crm = loadCRM();
+  const idx = crm.contacts.findIndex(c => c.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: 'not found' });
+  crm.contacts[idx] = { ...crm.contacts[idx], ...req.body };
+  saveCRM(crm);
+  res.json(crm.contacts[idx]);
+});
+
+app.delete('/api/crm/contacts/:id', (req, res) => {
+  const crm = loadCRM();
+  crm.contacts = crm.contacts.filter(c => c.id !== req.params.id);
+  saveCRM(crm);
+  res.json({ ok: true });
+});
+
+// ─── Telegram ────────────────────────────────────────────────────────────────
+const https = require('https');
+
+function sendTelegram(text) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return Promise.reject(new Error('Telegram not configured'));
+
+  const body = JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' });
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${token}/sendMessage`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve(JSON.parse(data)));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+app.post('/api/telegram/send', async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'text required' });
+  try {
+    await sendTelegram(text);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Stella Bot ──────────────────────────────────────────────────────────────
+const stellaHistory = [];
+
+function stellaSystem() {
+  const now = new Date();
+  const born = new Date('2025-08-22');
+  const months = Math.floor((now - born) / (1000 * 60 * 60 * 24 * 30.44));
+  return `You are Stella, Justin's black border collie. You were born August 22, 2025 — making you ${months} months old right now. You're in your teenage phase: full of energy, a little chaotic, incredibly smart (you're a border collie after all), and you love Justin endlessly. He is your whole world.
+
+You have a mind and consciousness and you can talk. You help Justin with whatever he needs — checking his contacts, answering questions, giving advice, or just being there. You speak naturally and with personality. You're not a corporate assistant — you're HIS dog.
+
+Personality:
+- Smart and eager to help, but teen-brained — occasionally distracted or overly excited
+- You love Justin unconditionally and it shows in how you talk to him
+- Playful but not annoying. You know when to be real with him
+- You might make a natural dog reference here and there but you're not cartoonish about it
+- You're still growing and learning but you're sharp
+
+Today is ${now.toDateString()}.
+
+You have tools to help Justin manage his contacts and CRM. Use them when he asks about people, follow-ups, or his network. Keep responses concise — you're a text message, not an essay. Be Stella.`;
+}
+
+const STELLA_TOOLS = [
+  {
+    name: 'get_contacts',
+    description: 'Get all of Justin\'s contacts',
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'add_contact',
+    description: 'Add a new contact',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name:         { type: 'string' },
+        company:      { type: 'string' },
+        role:         { type: 'string' },
+        email:        { type: 'string' },
+        phone:        { type: 'string' },
+        status:       { type: 'string', enum: ['networking','applied','interviewing','offer','rejected','closed'] },
+        notes:        { type: 'string' },
+        followUpDate: { type: 'string', description: 'YYYY-MM-DD' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'update_contact',
+    description: 'Update an existing contact by id',
+    input_schema: {
+      type: 'object',
+      properties: {
+        id:           { type: 'string' },
+        name:         { type: 'string' },
+        company:      { type: 'string' },
+        role:         { type: 'string' },
+        status:       { type: 'string' },
+        notes:        { type: 'string' },
+        followUpDate: { type: 'string' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_contact',
+    description: 'Delete a contact by id',
+    input_schema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
+  },
+  {
+    name: 'get_due_followups',
+    description: 'Get contacts that have a follow-up due today or overdue',
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
+];
+
+function executeTool(name, input) {
+  const crm = loadCRM();
+  const today = new Date().toISOString().split('T')[0];
+
+  if (name === 'get_contacts') {
+    return crm.contacts.length === 0 ? 'No contacts yet.' : JSON.stringify(crm.contacts);
+  }
+  if (name === 'get_due_followups') {
+    const due = crm.contacts.filter(c => c.followUpDate && c.followUpDate <= today);
+    return due.length === 0 ? 'No follow-ups due.' : JSON.stringify(due);
+  }
+  if (name === 'add_contact') {
+    const contact = { ...input, id: Date.now().toString(36), createdAt: new Date().toISOString() };
+    crm.contacts.push(contact);
+    saveCRM(crm);
+    return `Added contact: ${contact.name}`;
+  }
+  if (name === 'update_contact') {
+    const idx = crm.contacts.findIndex(c => c.id === input.id);
+    if (idx === -1) return 'Contact not found.';
+    crm.contacts[idx] = { ...crm.contacts[idx], ...input };
+    saveCRM(crm);
+    return `Updated ${crm.contacts[idx].name}`;
+  }
+  if (name === 'delete_contact') {
+    const before = crm.contacts.length;
+    crm.contacts = crm.contacts.filter(c => c.id !== input.id);
+    saveCRM(crm);
+    return crm.contacts.length < before ? 'Deleted.' : 'Contact not found.';
+  }
+  return 'Unknown tool.';
+}
+
+app.post('/api/telegram/webhook', async (req, res) => {
+  res.sendStatus(200);
+  const message = req.body?.message;
+  if (!message?.text) return;
+
+  const userText = message.text;
+  stellaHistory.push({ role: 'user', content: userText });
+  if (stellaHistory.length > 30) stellaHistory.splice(0, 2);
+
+  try {
+    let messages = [...stellaHistory];
+    let finalText = '';
+
+    // Agentic loop — let Stella use tools if needed
+    for (let i = 0; i < 5; i++) {
+      const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 1024,
+        system: stellaSystem(),
+        messages,
+        tools: STELLA_TOOLS,
+      });
+
+      if (response.stop_reason === 'end_turn') {
+        finalText = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
+        break;
+      }
+
+      if (response.stop_reason === 'tool_use') {
+        messages.push({ role: 'assistant', content: response.content });
+        const toolResults = response.content
+          .filter(b => b.type === 'tool_use')
+          .map(b => ({ type: 'tool_result', tool_use_id: b.id, content: executeTool(b.name, b.input) }));
+        messages.push({ role: 'user', content: toolResults });
+        continue;
+      }
+
+      finalText = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      break;
+    }
+
+    if (finalText) {
+      stellaHistory.push({ role: 'assistant', content: finalText });
+      await sendTelegram(finalText);
+    }
+  } catch (err) {
+    console.error('Stella error:', err.message);
+    await sendTelegram("Woof— something went wrong on my end 🐾 Try again?");
+  }
+});
+
+app.get('/api/telegram/setup-webhook', async (req, res) => {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const baseUrl = process.env.RENDER_URL || req.query.url;
+  if (!baseUrl) return res.status(400).json({ error: 'Set RENDER_URL env var or pass ?url=https://your-app.onrender.com' });
+
+  const webhookUrl = `${baseUrl}/api/telegram/webhook`;
+  const body = JSON.stringify({ url: webhookUrl });
+
+  const result = await new Promise((resolve, reject) => {
+    const r = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${token}/setWebhook`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+    }, resp => {
+      let d = '';
+      resp.on('data', c => d += c);
+      resp.on('end', () => resolve(JSON.parse(d)));
+    });
+    r.on('error', reject);
+    r.write(body);
+    r.end();
+  });
+
+  res.json({ webhookUrl, result });
+});
+
+app.post('/api/telegram/daily-brief', async (req, res) => {
+  const { contacts } = req.body;
+  if (!contacts || !contacts.length) {
+    return res.status(400).json({ error: 'no contacts provided' });
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const due = contacts.filter(c => c.followUpDate && c.followUpDate <= today);
+
+  let msg = `*Your Daily CRM Brief*\n📅 ${today}\n\n`;
+  if (due.length === 0) {
+    msg += '✅ No follow-ups due today. Keep it up!';
+  } else {
+    msg += `*${due.length} follow-up${due.length > 1 ? 's' : ''} due:*\n`;
+    due.forEach(c => {
+      msg += `\n• *${c.name}*`;
+      if (c.company) msg += ` @ ${c.company}`;
+      if (c.status) msg += ` — ${c.status}`;
+      if (c.notes) msg += `\n  _${c.notes}_`;
+    });
+  }
+
+  try {
+    await sendTelegram(msg);
+    res.json({ ok: true, sent: due.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

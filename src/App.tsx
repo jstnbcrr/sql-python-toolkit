@@ -20,8 +20,9 @@ const SeniorInsightCollection = lazy(() =>
 )
 const AccountSettings = lazy(() => import('@/components/AccountSettings'))
 const OnboardingTour = lazy(() => import('@/components/OnboardingTour'))
+const CRM = lazy(() => import('@/components/CRM'))
 
-type AppView = 'dashboard' | 'lesson' | 'editor' | 'project' | 'gate' | 'insights' | 'settings'
+type AppView = 'dashboard' | 'lesson' | 'editor' | 'project' | 'gate' | 'insights' | 'settings' | 'crm'
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center h-full">
@@ -80,6 +81,14 @@ export default function App() {
     return () => endSession()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  function notifyTelegram(text: string) {
+    fetch('/api/telegram/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    }).catch(() => {})
+  }
+
   const handleSelectWeek = useCallback((week: number) => {
     if (!isWeekUnlocked(week)) return
     setCurrentWeek(week)
@@ -111,6 +120,7 @@ export default function App() {
     { id: 'project', label: 'Project', icon: '🛠', disabled: !weekDef?.miniProject },
     { id: 'gate', label: 'Gate', icon: '🔒', disabled: !weekDef?.phaseGate },
     { id: 'insights', label: 'Insights', icon: '★' },
+    { id: 'crm', label: 'CRM', icon: '👤' },
   ]
 
   // Show auth screen if no active profile
@@ -288,6 +298,7 @@ export default function App() {
                   {view === 'insights' && (
                     <SeniorInsightCollection onClose={() => setView('dashboard')} />
                   )}
+                  {view === 'crm' && <CRM />}
                   {view === 'settings' && (
                     <AccountSettings
                       onClose={() => setView('dashboard')}

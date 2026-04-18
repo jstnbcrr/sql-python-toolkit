@@ -543,7 +543,7 @@ app.get('/api/telegram/setup-webhook', async (req, res) => {
   const baseUrl = process.env.RENDER_URL || req.query.url;
   if (!baseUrl) return res.status(400).json({ error: 'Set RENDER_URL env var or pass ?url=https://your-app.onrender.com' });
 
-  const webhookUrl = `${baseUrl}/api/telegram/webhook`;
+  const webhookUrl = `${baseUrl.replace(/\/$/, '')}/api/telegram/webhook`;
   const body = JSON.stringify({ url: webhookUrl });
 
   const result = await new Promise((resolve, reject) => {

@@ -463,7 +463,19 @@ app.post('/api/telegram/send', async (req, res) => {
 // ─── Stella Bot ──────────────────────────────────────────────────────────────
 const stellaHistory = [];
 
-function stellaSystem() {
+async function loadMemory() {
+  try {
+    const { rows } = await db.query('SELECT key, value FROM stella_memory ORDER BY updated_at DESC');
+    return rows.length === 0 ? '' : '\n\nWHAT YOU KNOW ABOUT JUSTIN (long term memory):\n' + rows.map(r => `- ${r.key}: ${r.value}`).join('\n');
+  } catch { return ''; }
+}
+
+async function stellaSystemAsync() {
+  const memory = await loadMemory();
+  return stellaSystem(memory);
+}
+
+function stellaSystem(memory = '') {
   const now = new Date();
   const born = new Date('2025-08-22');
   const months = Math.floor((now - born) / (1000 * 60 * 60 * 24 * 30.44));
@@ -501,9 +513,9 @@ PEOPLE IN HIS LIFE:
 - Jordan is his boyfriend. Factor him into scheduling and life advice when relevant.
 - Treat Jordan warmly — he matters to Justin so he matters to you
 
-Right now it is ${timeStr} on ${now.toDateString()} (Mountain Time, Utah).
+Right now it is ${timeStr} on ${now.toDateString()} (Mountain Time, Utah).${memory}
 
-You have CRM tools and a reminder tool. Use them when relevant. Keep messages concise — you're a text, not an essay. Be Stella. Always be Stella.`;
+You have CRM tools, a reminder tool, and memory tools (remember, recall, forget). Use remember() whenever Justin shares something important about himself — his schedule, goals, people in his life, preferences. Use recall() if you need to check what you know. Keep messages concise — you're a text, not an essay. Be Stella. Always be Stella.`;
 }
 
 const STELLA_TOOLS = [
@@ -570,6 +582,32 @@ const STELLA_TOOLS = [
       required: ['time', 'message'],
     },
   },
+  {
+    name: 'remember',
+    description: 'Save a fact about Justin to long term memory. Use when Justin says "remember that..." or shares something important about himself.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        key:   { type: 'string', description: 'Short label for this fact e.g. "work_schedule", "jordans_name", "interview_date"' },
+        value: { type: 'string', description: 'The full fact to remember' },
+      },
+      required: ['key', 'value'],
+    },
+  },
+  {
+    name: 'recall',
+    description: 'Read everything saved in long term memory about Justin.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'forget',
+    description: 'Delete a specific memory by key.',
+    input_schema: {
+      type: 'object',
+      properties: { key: { type: 'string' } },
+      required: ['key'],
+    },
+  },
 ];
 
 async function executeTool(name, input) {
@@ -606,6 +644,22 @@ async function executeTool(name, input) {
   if (name === 'delete_contact') {
     await db.query('DELETE FROM contacts WHERE id = $1', [input.id]);
     return 'Deleted.';
+  }
+  if (name === 'remember') {
+    await db.query(
+      `INSERT INTO stella_memory (key, value, updated_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()`,
+      [input.key, input.value]
+    );
+    return `Got it, I'll always remember: ${input.value}`;
+  }
+  if (name === 'recall') {
+    const { rows } = await db.query('SELECT key, value FROM stella_memory ORDER BY updated_at DESC');
+    return rows.length === 0 ? 'No long term memories yet.' : rows.map(r => `${r.key}: ${r.value}`).join('\n');
+  }
+  if (name === 'forget') {
+    await db.query('DELETE FROM stella_memory WHERE key = $1', [input.key]);
+    return `Forgot: ${input.key}`;
   }
   if (name === 'set_reminder') {
     const dateStr = input.date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
@@ -682,7 +736,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
       const response = await client.messages.create({
         model: STELLA_MODEL,
         max_tokens: 1024,
-        system: stellaSystem(),
+        system: await stellaSystemAsync(),
         messages,
         tools: STELLA_TOOLS,
       });

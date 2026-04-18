@@ -303,6 +303,34 @@ Keep it tight. This is a teaching moment, not a lecture.`;
 // ─── Server-side CRM ─────────────────────────────────────────────────────────
 const DATA_DIR = path.resolve(__dirname, 'data');
 const CRM_FILE = path.join(DATA_DIR, 'crm.json');
+const REMINDERS_FILE = path.join(DATA_DIR, 'reminders.json');
+
+function loadReminders() {
+  try {
+    if (fs.existsSync(REMINDERS_FILE)) return JSON.parse(fs.readFileSync(REMINDERS_FILE, 'utf8'));
+  } catch {}
+  return [];
+}
+
+function saveReminders(reminders) {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(REMINDERS_FILE, JSON.stringify(reminders, null, 2));
+}
+
+// Check every minute for due reminders
+setInterval(async () => {
+  const now = new Date();
+  const reminders = loadReminders();
+  const due = reminders.filter(r => !r.sent && new Date(r.fireAt) <= now);
+  if (!due.length) return;
+  for (const r of due) {
+    try {
+      await sendTelegram(`⏰ Reminder: ${r.message}`);
+      r.sent = true;
+    } catch {}
+  }
+  saveReminders(reminders);
+}, 60000);
 
 function loadCRM() {
   try {
@@ -454,6 +482,19 @@ const STELLA_TOOLS = [
     description: 'Get contacts that have a follow-up due today or overdue',
     input_schema: { type: 'object', properties: {}, required: [] },
   },
+  {
+    name: 'set_reminder',
+    description: 'Set a reminder to send Justin a message at a specific time today or on a date. time should be in HH:MM 24h format. date is YYYY-MM-DD, defaults to today.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        time:    { type: 'string', description: 'HH:MM in 24-hour format e.g. 13:15' },
+        message: { type: 'string', description: 'What to remind Justin about' },
+        date:    { type: 'string', description: 'YYYY-MM-DD, defaults to today' },
+      },
+      required: ['time', 'message'],
+    },
+  },
 ];
 
 function executeTool(name, input) {
@@ -485,6 +526,16 @@ function executeTool(name, input) {
     crm.contacts = crm.contacts.filter(c => c.id !== input.id);
     saveCRM(crm);
     return crm.contacts.length < before ? 'Deleted.' : 'Contact not found.';
+  }
+  if (name === 'set_reminder') {
+    const dateStr = input.date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });
+    const fireAt = new Date(`${dateStr}T${input.time}:00-06:00`);
+    if (isNaN(fireAt.getTime())) return 'Invalid time format.';
+    const reminder = { id: Date.now().toString(36), message: input.message, fireAt: fireAt.toISOString(), sent: false };
+    const reminders = loadReminders();
+    reminders.push(reminder);
+    saveReminders(reminders);
+    return `Reminder set for ${fireAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Denver' })}: "${input.message}"`;
   }
   return 'Unknown tool.';
 }

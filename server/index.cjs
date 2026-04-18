@@ -487,13 +487,55 @@ function executeTool(name, input) {
   return 'Unknown tool.';
 }
 
+async function getTelegramImageBase64(fileId) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const infoBody = JSON.stringify({ file_id: fileId });
+  const fileInfo = await new Promise((resolve, reject) => {
+    const r = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${token}/getFile`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(infoBody) },
+    }, res => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(JSON.parse(d))); });
+    r.on('error', reject); r.write(infoBody); r.end();
+  });
+  const filePath = fileInfo.result.file_path;
+  const imgData = await new Promise((resolve, reject) => {
+    https.get(`https://api.telegram.org/file/bot${token}/${filePath}`, res => {
+      const chunks = [];
+      res.on('data', c => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+    }).on('error', reject);
+  });
+  return imgData.toString('base64');
+}
+
 app.post('/api/telegram/webhook', async (req, res) => {
   res.sendStatus(200);
   const message = req.body?.message;
-  if (!message?.text) return;
+  if (!message) return;
 
-  const userText = message.text;
-  stellaHistory.push({ role: 'user', content: userText });
+  let userContent;
+
+  if (message.photo) {
+    const photo = message.photo[message.photo.length - 1];
+    try {
+      const base64 = await getTelegramImageBase64(photo.file_id);
+      userContent = [
+        { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: base64 } },
+        { type: 'text', text: message.caption || 'What do you see?' },
+      ];
+    } catch {
+      await sendTelegram("Woof, I couldn't load that image 🐾 Try again?");
+      return;
+    }
+  } else if (message.text) {
+    userContent = message.text;
+  } else {
+    return;
+  }
+
+  stellaHistory.push({ role: 'user', content: userContent });
   if (stellaHistory.length > 30) stellaHistory.splice(0, 2);
 
   try {

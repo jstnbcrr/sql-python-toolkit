@@ -457,6 +457,127 @@ function sendTelegram(text) {
   });
 }
 
+function sendTelegramFile(filename, content, caption) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const boundary = '----StellaFileBoundary' + Date.now();
+  const fileBuffer = Buffer.from(content, 'utf8');
+
+  const parts = [
+    `--${boundary}\r\nContent-Disposition: form-data; name="chat_id"\r\n\r\n${chatId}`,
+    `--${boundary}\r\nContent-Disposition: form-data; name="caption"\r\n\r\n${caption || ''}`,
+    `--${boundary}\r\nContent-Disposition: form-data; name="document"; filename="${filename}"\r\nContent-Type: text/html\r\n\r\n`,
+  ];
+
+  const header = Buffer.from(parts.join('\r\n') + '\r\n', 'utf8');
+  const footer = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8');
+  const body = Buffer.concat([header, fileBuffer, footer]);
+
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: 'api.telegram.org',
+      path: `/bot${token}/sendDocument`,
+      method: 'POST',
+      headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, 'Content-Length': body.length },
+    }, res => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve(JSON.parse(data)));
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function generateDashboardHTML() {
+  const [contactsRes, memoryRes] = await Promise.all([
+    db.query('SELECT * FROM contacts ORDER BY created_at DESC'),
+    db.query('SELECT key, value FROM stella_memory ORDER BY updated_at DESC'),
+  ]);
+
+  const contacts = contactsRes.rows;
+  const memory = memoryRes.rows;
+  const now = new Date();
+  const born = new Date('2025-08-22');
+  const months = Math.floor((now - born) / (1000 * 60 * 60 * 24 * 30.44));
+
+  const contactsHTML = contacts.length === 0
+    ? '<p style="color:#6b6b8a;text-align:center;padding:20px">No contacts yet</p>'
+    : contacts.map(c => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #2a2a3a">
+        <div>
+          <div style="font-weight:600;font-size:14px">${c.name}</div>
+          <div style="font-size:11px;color:#6b6b8a">${[c.role, c.company].filter(Boolean).join(' @ ') || '—'}</div>
+          ${c.follow_up_date ? `<div style="font-size:11px;color:#6b6b8a">Follow-up: ${new Date(c.follow_up_date).toLocaleDateString()}</div>` : ''}
+        </div>
+        <span style="font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid #7c6fff;color:#7c6fff;background:rgba(124,111,255,0.1)">${c.status}</span>
+      </div>`).join('');
+
+  const memoryHTML = memory.length === 0
+    ? '<p style="color:#6b6b8a;text-align:center;padding:20px">Tell Stella things to remember</p>'
+    : memory.map(m => `
+      <div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #2a2a3a;font-size:13px">
+        <span style="color:#7c6fff;font-weight:600;min-width:120px">${m.key}</span>
+        <span>${m.value}</span>
+      </div>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Stella Dashboard</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e8e8f0;padding:16px;min-height:100vh}
+    .card{background:#111118;border:1px solid #2a2a3a;border-radius:16px;padding:20px;margin-bottom:16px}
+    .label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#6b6b8a;margin-bottom:16px}
+    h1{font-size:28px;background:linear-gradient(135deg,#7c6fff,#ff6fb0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .badge{display:inline-block;background:rgba(124,111,255,0.1);border:1px solid #7c6fff;color:#7c6fff;font-size:11px;padding:2px 10px;border-radius:20px;margin-top:6px}
+    .stat{margin-bottom:12px}
+    .stat-bar{height:8px;background:#1a1a24;border-radius:4px;overflow:hidden;margin-top:4px}
+    .stat-fill{height:100%;border-radius:4px}
+    .generated{color:#6b6b8a;font-size:11px;text-align:center;margin-top:20px}
+  </style>
+</head>
+<body>
+  <div style="max-width:700px;margin:0 auto">
+    <div class="card" style="display:flex;align-items:center;gap:20px">
+      <div style="width:80px;height:80px;border-radius:50%;border:3px solid #7c6fff;background:#1a1a24;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0">🐾</div>
+      <div>
+        <h1>Stella</h1>
+        <p style="color:#6b6b8a;font-size:13px">Black Border Collie · Personal Assistant</p>
+        <span class="badge">${months} months old · Born Aug 22, 2025</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label">Stella's Stats</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="stat"><div style="font-size:12px;color:#6b6b8a">🍖 Fed</div><div class="stat-bar"><div class="stat-fill" style="background:#ffd166;width:80%"></div></div></div>
+        <div class="stat"><div style="font-size:12px;color:#6b6b8a">💝 Love</div><div class="stat-bar"><div class="stat-fill" style="background:#ff6fb0;width:90%"></div></div></div>
+        <div class="stat"><div style="font-size:12px;color:#6b6b8a">⚡ Energy</div><div class="stat-bar"><div class="stat-fill" style="background:#4fffb0;width:70%"></div></div></div>
+        <div class="stat"><div style="font-size:12px;color:#6b6b8a">🧠 Brain</div><div class="stat-bar"><div class="stat-fill" style="background:#7c6fff;width:95%"></div></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label">CRM Contacts (${contacts.length})</div>
+      ${contactsHTML}
+    </div>
+
+    <div class="card">
+      <div class="label">What Stella Knows</div>
+      ${memoryHTML}
+    </div>
+
+    <p class="generated">Generated by Stella · ${now.toLocaleString('en-US', { timeZone: 'America/Denver' })} MT</p>
+  </div>
+</body>
+</html>`;
+}
+
 app.post('/api/telegram/send', async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text required' });
@@ -616,6 +737,11 @@ const STELLA_TOOLS = [
       required: ['key'],
     },
   },
+  {
+    name: 'send_dashboard',
+    description: 'Generate a fresh HTML dashboard with Justin\'s CRM, memory, and stats and send it as a file in Telegram.',
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
 ];
 
 async function executeTool(name, input) {
@@ -668,6 +794,12 @@ async function executeTool(name, input) {
   if (name === 'forget') {
     await db.query('DELETE FROM stella_memory WHERE key = $1', [input.key]);
     return `Forgot: ${input.key}`;
+  }
+  if (name === 'send_dashboard') {
+    const html = await generateDashboardHTML();
+    const filename = `stella-${new Date().toISOString().split('T')[0]}.html`;
+    await sendTelegramFile(filename, html, 'Your Stella dashboard — open in browser 🐾');
+    return 'Dashboard sent!';
   }
   if (name === 'set_reminder') {
     const dateStr = input.date || new Date().toLocaleDateString('en-CA', { timeZone: 'America/Denver' });

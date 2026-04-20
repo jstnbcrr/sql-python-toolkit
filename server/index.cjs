@@ -737,6 +737,32 @@ async function generateDashboardHTML() {
 </html>`;
 }
 
+app.get('/api/test-search', async (req, res) => {
+  const apiKey = process.env.SEARCH_API_KEY;
+  if (!apiKey) return res.json({ error: 'SEARCH_API_KEY not set on Render' });
+  const body = JSON.stringify({ q: 'AI news today', num: 3 });
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const r = https.request({
+        hostname: 'google.serper.dev',
+        path: '/search',
+        method: 'POST',
+        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, resp => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ raw: d }); } });
+      });
+      r.on('error', reject);
+      r.write(body);
+      r.end();
+    });
+    res.json({ keyPrefix: apiKey.slice(0, 12) + '...', result });
+  } catch (err) {
+    res.json({ error: err.message });
+  }
+});
+
 app.post('/api/telegram/send', async (req, res) => {
   const { text } = req.body;
   if (!text) return res.status(400).json({ error: 'text required' });

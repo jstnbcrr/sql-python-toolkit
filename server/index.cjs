@@ -490,10 +490,35 @@ function sendTelegramFile(filename, content, caption) {
   });
 }
 
+async function fetchNewsForDashboard() {
+  const apiKey = process.env.SEARCH_API_KEY;
+  if (!apiKey) return [];
+  const body = JSON.stringify({ q: 'business intelligence analytics AI automation news 2025', num: 5 });
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const r = https.request({
+        hostname: 'google.serper.dev',
+        path: '/search',
+        method: 'POST',
+        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+      });
+      r.on('error', () => resolve({}));
+      r.write(body);
+      r.end();
+    });
+    return (result.organic || []).slice(0, 5);
+  } catch { return []; }
+}
+
 async function generateDashboardHTML() {
-  const [contactsRes, memoryRes] = await Promise.all([
+  const [contactsRes, memoryRes, news] = await Promise.all([
     db.query('SELECT * FROM contacts ORDER BY created_at DESC'),
     db.query('SELECT key, value FROM stella_memory ORDER BY updated_at DESC'),
+    fetchNewsForDashboard(),
   ]);
 
   const contacts = contactsRes.rows;
@@ -501,78 +526,157 @@ async function generateDashboardHTML() {
   const now = new Date();
   const born = new Date('2025-08-22');
   const months = Math.floor((now - born) / (1000 * 60 * 60 * 24 * 30.44));
+  const timeStr = now.toLocaleString('en-US', { timeZone: 'America/Denver', dateStyle: 'full', timeStyle: 'short' });
 
-  const contactsHTML = contacts.length === 0
-    ? '<p style="color:#6b6b8a;text-align:center;padding:20px">No contacts yet</p>'
-    : contacts.map(c => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #2a2a3a">
-        <div>
-          <div style="font-weight:600;font-size:14px">${c.name}</div>
-          <div style="font-size:11px;color:#6b6b8a">${[c.role, c.company].filter(Boolean).join(' @ ') || '—'}</div>
-          ${c.follow_up_date ? `<div style="font-size:11px;color:#6b6b8a">Follow-up: ${new Date(c.follow_up_date).toLocaleDateString()}</div>` : ''}
-        </div>
-        <span style="font-size:10px;padding:2px 8px;border-radius:20px;border:1px solid #7c6fff;color:#7c6fff;background:rgba(124,111,255,0.1)">${c.status}</span>
-      </div>`).join('');
+  const SC = {
+    networking:   { bg: 'rgba(59,130,246,.15)',  border: 'rgba(59,130,246,.4)',  text: '#60a5fa' },
+    applied:      { bg: 'rgba(234,179,8,.15)',   border: 'rgba(234,179,8,.4)',   text: '#facc15' },
+    interviewing: { bg: 'rgba(168,85,247,.15)',  border: 'rgba(168,85,247,.4)',  text: '#c084fc' },
+    offer:        { bg: 'rgba(34,197,94,.15)',   border: 'rgba(34,197,94,.4)',   text: '#4ade80' },
+    rejected:     { bg: 'rgba(239,68,68,.15)',   border: 'rgba(239,68,68,.4)',   text: '#f87171' },
+    closed:       { bg: 'rgba(107,114,128,.15)', border: 'rgba(107,114,128,.4)', text: '#9ca3af' },
+  };
+
+  const newsHTML = news.length === 0
+    ? '<p style="color:#4a4a6a;text-align:center;padding:30px">No news fetched</p>'
+    : news.map((item, i) => {
+        let domain = '';
+        try { domain = new URL(item.link).hostname.replace('www.', ''); } catch {}
+        return `<a href="${item.link}" target="_blank" style="text-decoration:none;display:block">
+          <div class="news-card" style="animation:fadeUp .5s ease ${i * 0.08}s both">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:11px;color:#7c6fff;font-weight:700;font-family:monospace">${i + 1}</span>
+              <span style="font-size:10px;color:#4a4a6a;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);padding:2px 8px;border-radius:20px">${domain}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:#d0d0f0;line-height:1.5;margin-bottom:6px">${item.title}</div>
+            ${item.snippet ? `<div style="font-size:12px;color:#5a5a8a;line-height:1.5">${item.snippet}</div>` : ''}
+          </div>
+        </a>`;
+      }).join('');
+
+  const crmHTML = contacts.length === 0
+    ? '<p style="color:#4a4a6a;text-align:center;padding:30px">No contacts yet</p>'
+    : contacts.map((c, i) => {
+        const col = SC[c.status] || SC.networking;
+        const overdue = c.follow_up_date && new Date(c.follow_up_date) <= new Date();
+        return `<div class="contact-card" style="animation:fadeUp .5s ease ${i * 0.07}s both">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:14px;color:#f0f0ff;margin-bottom:3px">${c.name}</div>
+              ${c.role || c.company ? `<div style="font-size:12px;color:#6b6b9a;margin-bottom:5px">${[c.role, c.company].filter(Boolean).join(' @ ')}</div>` : ''}
+              ${c.notes ? `<div style="font-size:11px;color:#7878a0;line-height:1.4">${c.notes.slice(0, 80)}${c.notes.length > 80 ? '…' : ''}</div>` : ''}
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+              <span style="font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid ${col.border};color:${col.text};background:${col.bg};white-space:nowrap">${c.status}</span>
+              ${overdue ? '<span style="font-size:9px;padding:2px 8px;border-radius:20px;border:1px solid rgba(251,191,36,.4);color:#fbbf24;background:rgba(251,191,36,.1)">follow up!</span>' : ''}
+            </div>
+          </div>
+          ${c.follow_up_date ? `<div style="font-size:10px;color:#4a4a6a;margin-top:8px">📅 ${new Date(c.follow_up_date).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>` : ''}
+        </div>`;
+      }).join('');
 
   const memoryHTML = memory.length === 0
-    ? '<p style="color:#6b6b8a;text-align:center;padding:20px">Tell Stella things to remember</p>'
-    : memory.map(m => `
-      <div style="display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #2a2a3a;font-size:13px">
-        <span style="color:#7c6fff;font-weight:600;min-width:120px">${m.key}</span>
-        <span>${m.value}</span>
+    ? '<p style="color:#4a4a6a;text-align:center;padding:30px">Tell Stella things to remember</p>'
+    : memory.map((m, i) => `<div class="memory-row" style="animation:fadeUp .5s ease ${i * 0.06}s both">
+        <span style="font-size:12px;font-weight:600;color:#7c6fff;min-width:130px;font-family:monospace">${m.key}</span>
+        <span style="font-size:13px;color:#8888aa;flex:1;line-height:1.5">${m.value}</span>
       </div>`).join('');
+
+  const crmSummary = ['networking','applied','interviewing','offer','rejected','closed'].map(s => {
+    const col = SC[s];
+    const count = contacts.filter(c => c.status === s).length;
+    return `<div style="padding:10px 12px;border-radius:12px;border:1px solid ${col.border};background:${col.bg}">
+      <div style="font-size:20px;font-weight:800;color:${col.text}">${count}</div>
+      <div style="font-size:10px;color:${col.text};opacity:.8;margin-top:2px;text-transform:capitalize">${s}</div>
+    </div>`;
+  }).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Stella Dashboard</title>
+  <title>Stella · Dashboard</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0a0f;color:#e8e8f0;padding:16px;min-height:100vh}
-    .card{background:#111118;border:1px solid #2a2a3a;border-radius:16px;padding:20px;margin-bottom:16px}
-    .label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#6b6b8a;margin-bottom:16px}
-    h1{font-size:28px;background:linear-gradient(135deg,#7c6fff,#ff6fb0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-    .badge{display:inline-block;background:rgba(124,111,255,0.1);border:1px solid #7c6fff;color:#7c6fff;font-size:11px;padding:2px 10px;border-radius:20px;margin-top:6px}
-    .stat{margin-bottom:12px}
-    .stat-bar{height:8px;background:#1a1a24;border-radius:4px;overflow:hidden;margin-top:4px}
-    .stat-fill{height:100%;border-radius:4px}
-    .generated{color:#6b6b8a;font-size:11px;text-align:center;margin-top:20px}
+    body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#07070f;color:#e0e0f0;min-height:100vh;overflow-x:hidden}
+    .orb{position:fixed;border-radius:50%;filter:blur(100px);opacity:.12;pointer-events:none}
+    .orb1{width:600px;height:600px;background:#7c6fff;top:-200px;left:-100px;animation:drift1 12s ease-in-out infinite}
+    .orb2{width:400px;height:400px;background:#ff6fb0;top:40%;right:-100px;animation:drift2 10s ease-in-out infinite}
+    .orb3{width:300px;height:300px;background:#00c8ff;bottom:10%;left:30%;animation:drift3 14s ease-in-out infinite}
+    @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,30px)}}
+    @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,40px)}}
+    @keyframes drift3{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-30px)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+    @keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+    @keyframes grow{from{width:0}}
+    .wrap{max-width:900px;margin:0 auto;padding:24px 16px;position:relative;z-index:1}
+    .glass{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:20px;padding:24px;backdrop-filter:blur(20px)}
+    .label{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#4a4a6a;margin-bottom:18px;display:flex;align-items:center;gap:8px}
+    .live-dot{width:7px;height:7px;border-radius:50%;background:#ff4444;display:inline-block;animation:pulse 1.4s ease-in-out infinite;box-shadow:0 0 6px #ff4444}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+    @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+    .mb{margin-bottom:16px}
+    .news-card{padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);margin-bottom:10px;transition:border-color .2s,background .2s}
+    .news-card:hover{border-color:rgba(124,111,255,.3);background:rgba(124,111,255,.05)}
+    .contact-card{padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);margin-bottom:10px}
+    .memory-row{display:flex;gap:16px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04);align-items:flex-start}
+    .memory-row:last-child{border-bottom:none}
+    .stat{margin-bottom:14px}
+    .stat-bar{height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+    .stat-fill{height:100%;border-radius:3px;animation:grow 1s ease both}
   </style>
 </head>
 <body>
-  <div style="max-width:700px;margin:0 auto">
-    <div class="card" style="display:flex;align-items:center;gap:20px">
-      <div style="width:80px;height:80px;border-radius:50%;border:3px solid #7c6fff;background:#1a1a24;display:flex;align-items:center;justify-content:center;font-size:36px;flex-shrink:0">🐾</div>
-      <div>
-        <h1>Stella</h1>
-        <p style="color:#6b6b8a;font-size:13px">Black Border Collie · Personal Assistant</p>
-        <span class="badge">${months} months old · Born Aug 22, 2025</span>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+  <div class="wrap">
+
+    <div class="glass mb" style="display:flex;align-items:center;gap:20px;animation:fadeUp .5s ease both">
+      <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#7c6fff,#ff6fb0);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;box-shadow:0 0 40px rgba(124,111,255,.4)">🐾</div>
+      <div style="flex:1">
+        <div style="font-size:36px;font-weight:800;background:linear-gradient(135deg,#7c6fff,#ff6fb0,#00c8ff);background-size:200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;letter-spacing:-1px">Stella</div>
+        <div style="color:#5a5a8a;font-size:13px;margin-top:3px">Black Border Collie · Personal AI · ${months} months old</div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <span style="font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid rgba(124,111,255,.3);color:#7c6fff;background:rgba(124,111,255,.08)">Born Aug 22, 2025</span>
+          <span style="font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid rgba(124,111,255,.3);color:#7c6fff;background:rgba(124,111,255,.08)">Utah</span>
+        </div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:#4a4a6a;line-height:1.7">
+        <div style="font-size:11px;color:#7c6fff;font-weight:600">MOUNTAIN TIME</div>
+        ${timeStr}
       </div>
     </div>
 
-    <div class="card">
-      <div class="label">Stella's Stats</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-        <div class="stat"><div style="font-size:12px;color:#6b6b8a">🍖 Fed</div><div class="stat-bar"><div class="stat-fill" style="background:#ffd166;width:80%"></div></div></div>
-        <div class="stat"><div style="font-size:12px;color:#6b6b8a">💝 Love</div><div class="stat-bar"><div class="stat-fill" style="background:#ff6fb0;width:90%"></div></div></div>
-        <div class="stat"><div style="font-size:12px;color:#6b6b8a">⚡ Energy</div><div class="stat-bar"><div class="stat-fill" style="background:#4fffb0;width:70%"></div></div></div>
-        <div class="stat"><div style="font-size:12px;color:#6b6b8a">🧠 Brain</div><div class="stat-bar"><div class="stat-fill" style="background:#7c6fff;width:95%"></div></div></div>
+    <div class="grid2">
+      <div class="glass" style="animation:fadeUp .5s ease .1s both">
+        <div class="label"><span class="live-dot"></span>Live News</div>
+        ${newsHTML}
+      </div>
+      <div class="glass" style="animation:fadeUp .5s ease .2s both">
+        <div class="label">Stella Stats</div>
+        <div class="stat"><div style="font-size:12px;color:#5a5a8a;margin-bottom:5px;display:flex;justify-content:space-between"><span>🍖 Fed</span><span style="color:#ffd166">80%</span></div><div class="stat-bar"><div class="stat-fill" style="width:80%;background:linear-gradient(90deg,#ffd166,#ff9f43)"></div></div></div>
+        <div class="stat"><div style="font-size:12px;color:#5a5a8a;margin-bottom:5px;display:flex;justify-content:space-between"><span>💝 Love</span><span style="color:#ff6fb0">100%</span></div><div class="stat-bar"><div class="stat-fill" style="width:100%;background:linear-gradient(90deg,#ff6fb0,#ff4488)"></div></div></div>
+        <div class="stat"><div style="font-size:12px;color:#5a5a8a;margin-bottom:5px;display:flex;justify-content:space-between"><span>⚡ Energy</span><span style="color:#4fffb0">92%</span></div><div class="stat-bar"><div class="stat-fill" style="width:92%;background:linear-gradient(90deg,#4fffb0,#00c8ff)"></div></div></div>
+        <div class="stat"><div style="font-size:12px;color:#5a5a8a;margin-bottom:5px;display:flex;justify-content:space-between"><span>🧠 Brain</span><span style="color:#7c6fff">∞</span></div><div class="stat-bar"><div class="stat-fill" style="width:100%;background:linear-gradient(90deg,#7c6fff,#c084fc)"></div></div></div>
+        <div class="label" style="margin-top:20px">Pipeline</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${crmSummary}</div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="label">CRM Contacts (${contacts.length})</div>
-      ${contactsHTML}
+    <div class="glass mb" style="animation:fadeUp .5s ease .3s both">
+      <div class="label">CRM · ${contacts.length} contact${contacts.length !== 1 ? 's' : ''}</div>
+      ${crmHTML}
     </div>
 
-    <div class="card">
+    <div class="glass" style="animation:fadeUp .5s ease .4s both">
       <div class="label">What Stella Knows</div>
       ${memoryHTML}
     </div>
 
-    <p class="generated">Generated by Stella · ${now.toLocaleString('en-US', { timeZone: 'America/Denver' })} MT</p>
+    <p style="text-align:center;color:#3a3a5a;font-size:11px;margin-top:24px;padding-bottom:24px">Generated by Stella · ${timeStr} · Justin's Personal AI</p>
   </div>
 </body>
 </html>`;

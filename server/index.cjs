@@ -774,6 +774,17 @@ const STELLA_TOOLS = [
     },
   },
   {
+    name: 'web_search',
+    description: 'Search the internet for real-time information — news, job postings, weather, anything current.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'The search query' },
+      },
+      required: ['query'],
+    },
+  },
+  {
     name: 'send_dashboard',
     description: 'Generate a fresh HTML dashboard with Justin\'s CRM, memory, and stats and send it as a file in Telegram.',
     input_schema: { type: 'object', properties: {}, required: [] },
@@ -844,6 +855,42 @@ async function executeTool(name, input) {
     const id = Date.now().toString(36);
     await db.query('INSERT INTO reminders (id, message, fire_at) VALUES ($1, $2, $3)', [id, input.message, fireAt]);
     return `Reminder set for ${fireAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Denver' })}: "${input.message}"`;
+  }
+  if (name === 'web_search') {
+    const apiKey = process.env.SEARCH_API_KEY;
+    if (!apiKey) return 'Search API key not configured.';
+    const body = JSON.stringify({ q: input.query, num: 5 });
+    const result = await new Promise((resolve, reject) => {
+      const r = https.request({
+        hostname: 'google.serper.dev',
+        path: '/search',
+        method: 'POST',
+        headers: {
+          'X-API-KEY': apiKey,
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      }, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ error: d }); } });
+      });
+      r.on('error', reject);
+      r.write(body);
+      r.end();
+    });
+    if (result.error) return `Search failed: ${result.error}`;
+    const organic = (result.organic || []).slice(0, 5);
+    const knowledgeGraph = result.knowledgeGraph;
+    let out = '';
+    if (knowledgeGraph) {
+      out += `KNOWLEDGE: ${knowledgeGraph.title} — ${knowledgeGraph.description || ''}\n\n`;
+    }
+    if (organic.length === 0) return 'No results found.';
+    out += organic.map((r, i) =>
+      `${i + 1}. ${r.title}\n   ${r.snippet || ''}\n   ${r.link}`
+    ).join('\n\n');
+    return out;
   }
   return 'Unknown tool.';
 }

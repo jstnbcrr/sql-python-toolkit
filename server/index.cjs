@@ -12,7 +12,7 @@ const db = new Pool({
   database: process.env.PG_DATABASE,
   user:     process.env.PG_USER,
   password: process.env.PG_PASSWORD,
-  ssl:      false,
+  ssl:      { rejectUnauthorized: false },
 });
 
 async function initDB() {

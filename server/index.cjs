@@ -403,6 +403,7 @@ async function runStellaTask(prompt) {
 }
 
 let lastBriefingDate = null;
+let lastNightBriefingDate = null;
 
 // Check every minute for due reminders and morning briefing
 setInterval(async () => {
@@ -427,8 +428,13 @@ setInterval(async () => {
       console.log('Sending morning briefing...');
       await runStellaTask('morning briefing');
     }
+    if (hour === 21 && minute === 0 && lastNightBriefingDate !== dateStr) {
+      lastNightBriefingDate = dateStr;
+      console.log('Sending night briefing...');
+      await runStellaTask('night briefing — check my follow-ups due, recap what I should have done today from memory, tell me what to prioritize tomorrow, and call me out if I missed a workout. Keep it short.');
+    }
   } catch (err) {
-    console.error('Morning briefing error:', err.message);
+    console.error('Briefing error:', err.message);
   }
 }, 60000);
 

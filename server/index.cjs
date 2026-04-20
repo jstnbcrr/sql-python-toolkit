@@ -549,7 +549,7 @@ async function fetchNewsForDashboard() {
   const apiKey = process.env.SEARCH_API_KEY;
   if (!apiKey) return [];
   try {
-    const params = new URLSearchParams({ api_key: apiKey, q: 'business intelligence analytics AI automation news 2025', engine: 'google', num: '5' });
+    const params = new URLSearchParams({ api_key: apiKey, q: 'business intelligence analytics AI automation news 2025', engine: 'google' });
     const result = await new Promise((resolve, reject) => {
       https.get(`https://www.searchapi.io/api/v1/search?${params}`, res => {
         let d = '';
@@ -733,7 +733,7 @@ app.get('/api/test-search', async (req, res) => {
   const apiKey = process.env.SEARCH_API_KEY;
   if (!apiKey) return res.json({ error: 'SEARCH_API_KEY not set on Render' });
   try {
-    const params = new URLSearchParams({ api_key: apiKey, q: 'AI news today', engine: 'google', num: '3' });
+    const params = new URLSearchParams({ api_key: apiKey, q: 'AI news today', engine: 'google' });
     const result = await new Promise((resolve, reject) => {
       https.get(`https://www.searchapi.io/api/v1/search?${params}`, resp => {
         let d = '';
@@ -1031,7 +1031,7 @@ async function executeTool(name, input) {
   if (name === 'web_search') {
     const apiKey = process.env.SEARCH_API_KEY;
     if (!apiKey) return 'Search API key not configured.';
-    const params = new URLSearchParams({ api_key: apiKey, q: input.query, engine: 'google', num: '5' });
+    const params = new URLSearchParams({ api_key: apiKey, q: input.query, engine: 'google' });
     const result = await new Promise((resolve, reject) => {
       https.get(`https://www.searchapi.io/api/v1/search?${params}`, res => {
         let d = '';

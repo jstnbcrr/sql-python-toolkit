@@ -375,7 +375,36 @@ function rowToContact(r) {
   };
 }
 
-// Check every minute for due reminders
+async function runStellaTask(prompt) {
+  const system = await stellaSystemAsync();
+  let messages = [{ role: 'user', content: prompt }];
+  let finalText = '';
+  for (let i = 0; i < 5; i++) {
+    const response = await client.messages.create({
+      model: STELLA_MODEL, max_tokens: 1024, system, messages, tools: STELLA_TOOLS,
+    });
+    if (response.stop_reason === 'end_turn') {
+      finalText = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      break;
+    }
+    if (response.stop_reason === 'tool_use') {
+      messages.push({ role: 'assistant', content: response.content });
+      const results = await Promise.all(
+        response.content.filter(b => b.type === 'tool_use')
+          .map(async b => ({ type: 'tool_result', tool_use_id: b.id, content: await executeTool(b.name, b.input) }))
+      );
+      messages.push({ role: 'user', content: results });
+      continue;
+    }
+    finalText = response.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    break;
+  }
+  if (finalText) await sendTelegram(finalText);
+}
+
+let lastBriefingDate = null;
+
+// Check every minute for due reminders and morning briefing
 setInterval(async () => {
   try {
     const { rows } = await db.query('SELECT * FROM reminders WHERE sent = FALSE AND fire_at <= NOW()');
@@ -385,6 +414,21 @@ setInterval(async () => {
     }
   } catch (err) {
     console.error('Reminder check error:', err.message);
+  }
+
+  // Morning briefing at 7 AM Mountain Time
+  try {
+    const mtNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Denver' }));
+    const hour = mtNow.getHours();
+    const minute = mtNow.getMinutes();
+    const dateStr = mtNow.toLocaleDateString('en-CA');
+    if (hour === 7 && minute === 0 && lastBriefingDate !== dateStr) {
+      lastBriefingDate = dateStr;
+      console.log('Sending morning briefing...');
+      await runStellaTask('morning briefing');
+    }
+  } catch (err) {
+    console.error('Morning briefing error:', err.message);
   }
 }, 60000);
 

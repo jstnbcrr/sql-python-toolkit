@@ -1042,7 +1042,8 @@ async function executeTool(name, input) {
       r.end();
     });
     if (result.error) return `Search failed: ${result.error}`;
-    const organic = (result.organic || []).slice(0, 5);
+    if (!result.organic) return `Search API response: ${JSON.stringify(result).slice(0, 300)}`;
+    const organic = result.organic.slice(0, 5);
     const knowledgeGraph = result.knowledgeGraph;
     let out = '';
     if (knowledgeGraph) {

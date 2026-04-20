@@ -54,7 +54,9 @@ async function initDB() {
 
     // Load conversation history into memory
     const { rows } = await db.query('SELECT role, content FROM stella_history ORDER BY created_at DESC LIMIT 30');
-    stellaHistory.push(...rows.reverse().map(r => ({ role: r.role, content: r.content })));
+    stellaHistory.push(...rows.reverse()
+      .filter(r => r.content.length < 8000 && !r.content.includes('"type":"base64"'))
+      .map(r => ({ role: r.role, content: r.content })));
     console.log(`✓ Loaded ${stellaHistory.length} history messages`);
   } catch (err) {
     console.error('✗ Database error:', err.message);
@@ -1068,11 +1070,13 @@ app.post('/api/telegram/webhook', async (req, res) => {
     return;
   }
 
-  const userContentStr = typeof userContent === 'string' ? userContent : JSON.stringify(userContent);
+  // Store text-only version in DB (never store base64 image data)
+  const userContentStr = typeof userContent === 'string'
+    ? userContent
+    : (userContent.find(b => b.type === 'text')?.text || '[image]');
   stellaHistory.push({ role: 'user', content: userContent });
   if (stellaHistory.length > 30) stellaHistory.splice(0, 2);
 
-  // Persist user message
   try { await db.query('INSERT INTO stella_history (role, content) VALUES ($1, $2)', ['user', userContentStr]); } catch {}
 
   try {

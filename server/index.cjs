@@ -1025,6 +1025,24 @@ async function getTelegramImageBase64(fileId) {
   return imgData.toString('base64');
 }
 
+function sanitizeHistory(history) {
+  const out = [];
+  let lastRole = null;
+  for (const msg of history) {
+    if (msg.role !== lastRole) { out.push(msg); lastRole = msg.role; }
+  }
+  while (out.length > 0 && out[0].role !== 'user') out.shift();
+  return out;
+}
+
+app.get('/api/stella/clear-history', async (req, res) => {
+  try {
+    await db.query('DELETE FROM stella_history');
+    stellaHistory.length = 0;
+    res.json({ ok: true, message: 'History cleared — Stella has a fresh start' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/telegram/webhook', async (req, res) => {
   res.sendStatus(200);
   const message = req.body?.message;
@@ -1058,7 +1076,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
   try { await db.query('INSERT INTO stella_history (role, content) VALUES ($1, $2)', ['user', userContentStr]); } catch {}
 
   try {
-    let messages = [...stellaHistory];
+    let messages = sanitizeHistory([...stellaHistory]);
     let finalText = '';
 
     // Agentic loop — let Stella use tools if needed
@@ -1098,7 +1116,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
     }
   } catch (err) {
     console.error('Stella error:', err.message);
-    await sendTelegram("Woof— something went wrong on my end 🐾 Try again?");
+    await sendTelegram(`Woof— something went wrong 🐾\n\nError: ${(err.message || '').slice(0, 150)}`);
   }
 });
 

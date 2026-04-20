@@ -548,24 +548,16 @@ function sendTelegramFile(filename, content, caption) {
 async function fetchNewsForDashboard() {
   const apiKey = process.env.SEARCH_API_KEY;
   if (!apiKey) return [];
-  const body = JSON.stringify({ q: 'business intelligence analytics AI automation news 2025', num: 5 });
   try {
+    const params = new URLSearchParams({ api_key: apiKey, q: 'business intelligence analytics AI automation news 2025', engine: 'google', num: '5' });
     const result = await new Promise((resolve, reject) => {
-      const r = https.request({
-        hostname: 'google.serper.dev',
-        path: '/search',
-        method: 'POST',
-        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      }, res => {
+      https.get(`https://www.searchapi.io/api/v1/search?${params}`, res => {
         let d = '';
         res.on('data', c => d += c);
         res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
-      });
-      r.on('error', () => resolve({}));
-      r.write(body);
-      r.end();
+      }).on('error', () => resolve({}));
     });
-    return (result.organic || []).slice(0, 5);
+    return (result.organic_results || []).slice(0, 5);
   } catch { return []; }
 }
 
@@ -740,22 +732,14 @@ async function generateDashboardHTML() {
 app.get('/api/test-search', async (req, res) => {
   const apiKey = process.env.SEARCH_API_KEY;
   if (!apiKey) return res.json({ error: 'SEARCH_API_KEY not set on Render' });
-  const body = JSON.stringify({ q: 'AI news today', num: 3 });
   try {
+    const params = new URLSearchParams({ api_key: apiKey, q: 'AI news today', engine: 'google', num: '3' });
     const result = await new Promise((resolve, reject) => {
-      const r = https.request({
-        hostname: 'google.serper.dev',
-        path: '/search',
-        method: 'POST',
-        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-      }, resp => {
+      https.get(`https://www.searchapi.io/api/v1/search?${params}`, resp => {
         let d = '';
         resp.on('data', c => d += c);
         resp.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ raw: d }); } });
-      });
-      r.on('error', reject);
-      r.write(body);
-      r.end();
+      }).on('error', reject);
     });
     res.json({ keyPrefix: apiKey.slice(0, 12) + '...', result });
   } catch (err) {
@@ -1047,39 +1031,20 @@ async function executeTool(name, input) {
   if (name === 'web_search') {
     const apiKey = process.env.SEARCH_API_KEY;
     if (!apiKey) return 'Search API key not configured.';
-    const body = JSON.stringify({ q: input.query, num: 5 });
+    const params = new URLSearchParams({ api_key: apiKey, q: input.query, engine: 'google', num: '5' });
     const result = await new Promise((resolve, reject) => {
-      const r = https.request({
-        hostname: 'google.serper.dev',
-        path: '/search',
-        method: 'POST',
-        headers: {
-          'X-API-KEY': apiKey,
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-        },
-      }, res => {
+      https.get(`https://www.searchapi.io/api/v1/search?${params}`, res => {
         let d = '';
         res.on('data', c => d += c);
         res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ error: d }); } });
-      });
-      r.on('error', reject);
-      r.write(body);
-      r.end();
+      }).on('error', reject);
     });
     if (result.error) return `Search failed: ${result.error}`;
-    if (!result.organic) return `Search API response: ${JSON.stringify(result).slice(0, 300)}`;
-    const organic = result.organic.slice(0, 5);
-    const knowledgeGraph = result.knowledgeGraph;
-    let out = '';
-    if (knowledgeGraph) {
-      out += `KNOWLEDGE: ${knowledgeGraph.title} — ${knowledgeGraph.description || ''}\n\n`;
-    }
-    if (organic.length === 0) return 'No results found.';
-    out += organic.map((r, i) =>
+    const organic = (result.organic_results || []).slice(0, 5);
+    if (organic.length === 0) return `Search returned no results. Raw: ${JSON.stringify(result).slice(0, 200)}`;
+    return organic.map((r, i) =>
       `${i + 1}. ${r.title}\n   ${r.snippet || ''}\n   ${r.link}`
     ).join('\n\n');
-    return out;
   }
   return 'Unknown tool.';
 }

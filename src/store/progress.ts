@@ -275,6 +275,8 @@ export const useProgressStore = create<ProgressState>()(
 
       isWeekUnlocked: (week) => {
         const state = get()
+        // Already-read weeks are always revisitable
+        if (state.weekProgress[week]?.lessonRead) return true
         if (week <= 4) return true
         // Phase 1 gate required for weeks 5-8
         if (week <= 8) return state.phaseGates[1]?.passed === true

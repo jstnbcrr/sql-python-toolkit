@@ -120,7 +120,7 @@ interface WeekDotProps {
 }
 
 const WeekDot: React.FC<WeekDotProps> = ({ week, status, onClick }) => {
-  const isClickable = status === 'available' || status === 'current'
+  const isClickable = status !== 'locked'
 
   const baseClasses =
     'relative flex items-center justify-center w-9 h-9 rounded-full text-xs font-mono font-semibold transition-all duration-200 select-none'

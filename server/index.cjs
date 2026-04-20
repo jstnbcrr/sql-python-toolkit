@@ -52,10 +52,13 @@ async function initDB() {
     `);
     console.log('✓ Database ready');
 
+    // Clean up any giant/image rows from history
+    await db.query(`DELETE FROM stella_history WHERE length(content) > 8000 OR content LIKE '%"type":"base64"%'`);
+
     // Load conversation history into memory
     const { rows } = await db.query('SELECT role, content FROM stella_history ORDER BY created_at DESC LIMIT 30');
     stellaHistory.push(...rows.reverse()
-      .filter(r => r.content.length < 8000 && !r.content.includes('"type":"base64"'))
+      .filter(r => r.content.length < 8000)
       .map(r => ({ role: r.role, content: r.content })));
     console.log(`✓ Loaded ${stellaHistory.length} history messages`);
   } catch (err) {

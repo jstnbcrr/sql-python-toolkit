@@ -549,15 +549,19 @@ async function fetchNewsForDashboard() {
   const apiKey = process.env.SEARCH_API_KEY;
   if (!apiKey) return [];
   try {
-    const params = new URLSearchParams({ api_key: apiKey, q: 'business intelligence analytics AI automation news 2025', engine: 'google' });
+    const body = JSON.stringify({ q: 'business intelligence analytics AI automation news 2025', num: 5 });
     const result = await new Promise((resolve, reject) => {
-      https.get(`https://www.searchapi.io/api/v1/search?${params}`, res => {
+      const r = https.request({
+        hostname: 'google.serper.dev', path: '/search', method: 'POST',
+        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, res => {
         let d = '';
         res.on('data', c => d += c);
         res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
-      }).on('error', () => resolve({}));
+      });
+      r.on('error', () => resolve({})); r.write(body); r.end();
     });
-    return (result.organic_results || []).slice(0, 5);
+    return (result.organic || []).slice(0, 5);
   } catch { return []; }
 }
 
@@ -733,13 +737,17 @@ app.get('/api/test-search', async (req, res) => {
   const apiKey = process.env.SEARCH_API_KEY;
   if (!apiKey) return res.json({ error: 'SEARCH_API_KEY not set on Render' });
   try {
-    const params = new URLSearchParams({ api_key: apiKey, q: 'AI news today', engine: 'google' });
+    const body = JSON.stringify({ q: 'AI news today', num: 3 });
     const result = await new Promise((resolve, reject) => {
-      https.get(`https://www.searchapi.io/api/v1/search?${params}`, resp => {
+      const r = https.request({
+        hostname: 'google.serper.dev', path: '/search', method: 'POST',
+        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, resp => {
         let d = '';
         resp.on('data', c => d += c);
         resp.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ raw: d }); } });
-      }).on('error', reject);
+      });
+      r.on('error', reject); r.write(body); r.end();
     });
     res.json({ keyPrefix: apiKey.slice(0, 12) + '...', result });
   } catch (err) {
@@ -1031,20 +1039,22 @@ async function executeTool(name, input) {
   if (name === 'web_search') {
     const apiKey = process.env.SEARCH_API_KEY;
     if (!apiKey) return 'Search API key not configured.';
-    const params = new URLSearchParams({ api_key: apiKey, q: input.query, engine: 'google' });
+    const body = JSON.stringify({ q: input.query, num: 5 });
     const result = await new Promise((resolve, reject) => {
-      https.get(`https://www.searchapi.io/api/v1/search?${params}`, res => {
+      const r = https.request({
+        hostname: 'google.serper.dev', path: '/search', method: 'POST',
+        headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      }, res => {
         let d = '';
         res.on('data', c => d += c);
         res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({ error: d }); } });
-      }).on('error', reject);
+      });
+      r.on('error', reject); r.write(body); r.end();
     });
     if (result.error) return `Search failed: ${result.error}`;
-    const organic = (result.organic_results || []).slice(0, 5);
-    if (organic.length === 0) return `Search returned no results. Raw: ${JSON.stringify(result).slice(0, 200)}`;
-    return organic.map((r, i) =>
-      `${i + 1}. ${r.title}\n   ${r.snippet || ''}\n   ${r.link}`
-    ).join('\n\n');
+    const organic = (result.organic || []).slice(0, 5);
+    if (organic.length === 0) return `No results. API: ${JSON.stringify(result).slice(0, 200)}`;
+    return organic.map((r, i) => `${i + 1}. ${r.title}\n   ${r.snippet || ''}\n   ${r.link}`).join('\n\n');
   }
   return 'Unknown tool.';
 }
